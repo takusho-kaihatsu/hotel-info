@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>TSUBAKIMORI HOTEL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --rose:       #C9888C;
+      --rose-dark:  #B07478;
+      --rose-light: #F0DEDE;
+      --rose-bg:    #F7ECED;
+      --white:      #FFFFFF;
+      --black:      #1A1A1A;
+      --gray:       #888888;
+      --gray-light: #F5F5F5;
+      --font-ja: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+      --font-en: 'Cormorant Garamond', Georgia, serif;
+      --radius: 18px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      height: 100%;
+      overflow-x: hidden;
+    }
+
+    body {
+      font-family: var(--font-ja);
+      background: var(--rose-bg);
+      min-height: 100%;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body.panel-open { overflow: hidden; }
+
+    /* ── APP SHELL ── */
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--rose-bg);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background:
+        linear-gradient(180deg, transparent 55%, rgba(255,255,255,.12) 100%),
+        linear-gradient(135deg,
+          #D4B896 0%,
+          #C09878 18%,
+          #9E8A72 34%,
+          #8A9E84 55%,
+          #6B9490 75%,
+          #5A7888 100%
+        );
+    }
+
+    /* ── HOTEL INFO ── */
+    .hotel-info {
+      background: var(--rose-bg);
+      padding: 20px 20px 18px;
+    }
+
+    .hotel-name {
+      font-family: var(--font-en);
+      font-size: 26px;
+      font-weight: 600;
+      letter-spacing: .07em;
+      color: var(--black);
+      margin-bottom: 6px;
+      line-height: 1.2;
+    }
+
+    .hotel-address {
+      font-size: 13px;
+      color: var(--gray);
+      letter-spacing: .01em;
+      line-height: 1.55;
+    }
+
+    /* ── MENU GRID ── */
+    .menu-section {
+      background: var(--rose-bg);
+      padding: 16px;
+      min-height: calc(100vh - 200px);
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .menu-card {
+      background: var(--rose);
+      border-radius: var(--radius);
+      padding: 20px 8px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      border: none;
+      appearance: none;
+      -webkit-appearance: none;
+      color: var(--white);
+      min-height: 130px;
+      width: 100%;
+      text-align: center;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+
+    .menu-card:active { transform: scale(.95); }
+
+    .menu-card.selected {
+      background: var(--white);
+      color: var(--rose);
+      box-shadow: 0 4px 20px rgba(201,136,140,.35);
+    }
+
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      display: block;
+      flex-shrink: 0;
+    }
+
+    .card-label {
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.4;
+      color: inherit;
+    }
+
+    /* ── DETAIL PANEL ── */
+    .detail-panel {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: var(--white);
+      transform: translateX(100%);
+      transition: transform .32s cubic-bezier(.4,0,.2,1);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .detail-panel.open { transform: translateX(0); }
+
+    .detail-header {
+      flex-shrink: 0;
+      background: var(--rose);
+      padding: 16px 20px;
+      padding-top: max(16px, calc(16px + env(safe-area-inset-top, 0px)));
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .back-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,.22);
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .15s;
+    }
+
+    .back-btn:active { background: rgba(255,255,255,.38); }
+
+    .detail-title-text {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--white);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .detail-body {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 24px 20px;
+      padding-bottom: max(24px, calc(24px + env(safe-area-inset-bottom, 0px)));
+      background: var(--rose-bg);
+    }
+
+    /* ── DETAIL CONTENT ATOMS ── */
+    .dc-concept-en {
+      font-family: var(--font-en);
+      font-size: 13px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--rose);
+      margin-bottom: 6px;
+    }
+
+    .dc-h1 {
+      font-family: var(--font-en);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--black);
+      line-height: 1.25;
+      margin-bottom: 22px;
+    }
+
+    .dc-concept-body {
+      font-size: 14px;
+      line-height: 1.88;
+      color: #444;
+    }
+
+    .dc-concept-body p { margin-bottom: 16px; }
+    .dc-concept-body p:last-child { margin-bottom: 0; }
+
+    .dc-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--black);
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--rose-light);
+      margin: 24px 0 14px;
+    }
+
+    .dc-section-title:first-child { margin-top: 0; }
+
+    .dc-subsection {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--rose-dark);
+      margin: 16px 0 8px;
+    }
+
+    .dc-p {
+      font-size: 14px;
+      line-height: 1.75;
+      color: #333;
+      margin-bottom: 12px;
+    }
+
+    .dc-p:last-child { margin-bottom: 0; }
+
+    .dc-ul {
+      margin: 0 0 12px;
+      padding-left: 18px;
+    }
+
+    .dc-ul li {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #333;
+      margin-bottom: 4px;
+    }
+
+    /* wifi */
+    .wifi-card {
+      background: var(--rose);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      margin: 8px 0 24px;
+      text-align: center;
+    }
+
+    .wifi-row { margin: 10px 0; }
+
+    .wifi-lbl {
+      font-size: 11px;
+      color: rgba(255,255,255,.75);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .wifi-val {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: .04em;
+      font-family: 'Courier New', Courier, monospace;
+      word-break: break-all;
+    }
+
+    .wifi-divider {
+      height: 1px;
+      background: rgba(255,255,255,.25);
+      margin: 16px 0;
+    }
+
+    /* checkin/out */
+    .cio-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 12px 0 20px;
+    }
+
+    .cio-box {
+      background: var(--rose);
+      border-radius: 16px;
+      padding: 18px 12px;
+      text-align: center;
+      color: var(--white);
+    }
+
+    .cio-lbl {
+      font-size: 11px;
+      opacity: .8;
+      margin-bottom: 6px;
+    }
+
+    .cio-time {
+      font-family: var(--font-en);
+      font-size: 32px;
+      font-weight: 600;
+      line-height: 1.1;
+    }
+
+    .cio-note {
+      font-size: 11px;
+      opacity: .75;
+      margin-top: 5px;
+    }
+
+    .cio-en {
+      font-size: 12px;
+      color: var(--gray);
+      line-height: 1.65;
+      background: var(--gray-light);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+    }
+
+    /* floor guide */
+    .floor-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--rose-light);
+    }
+
+    .floor-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--rose-light);
+    }
+
+    .floor-item:last-child { border-bottom: none; }
+
+    .floor-f {
+      font-family: var(--font-en);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--rose);
+      width: 30px;
+      flex-shrink: 0;
+      text-align: center;
+    }
+
+    .floor-desc {
+      font-size: 13px;
+      color: var(--black);
+      line-height: 1.45;
+    }
+
+    /* info box */
+    .info-box {
+      border: 1px solid var(--rose-light);
+      border-radius: 16px;
+      overflow: hidden;
+      margin: 8px 0 18px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--rose-light);
+      gap: 10px;
+    }
+
+    .info-row:last-child { border-bottom: none; }
+
+    .info-lbl {
+      font-size: 12px;
+      color: var(--gray);
+      white-space: nowrap;
+      flex-shrink: 0;
+      padding-top: 1px;
+    }
+
+    .info-val {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--black);
+      text-align: right;
+      line-height: 1.55;
+    }
+
+    /* amenity tags */
+    .tag-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0 16px;
+    }
+
+    .tag {
+      display: inline-block;
+      background: var(--rose-light);
+      color: var(--rose-dark);
+      border-radius: 20px;
+      padding: 5px 13px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    /* venue */
+    .venue {
+      border: 1px solid var(--rose-light);
+      border-radius: 16px;
+      padding: 16px;
+      margin: 10px 0;
+    }
+
+    .venue-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--black);
+      margin-bottom: 3px;
+    }
+
+    .venue-desc {
+      font-size: 12px;
+      color: var(--gray);
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
+    .link-row {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .link-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 13px;
+      background: var(--rose-light);
+      color: var(--rose-dark);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity .15s;
+    }
+
+    .link-chip:active { opacity: .7; }
+
+    .link-chip-pdf {
+      background: var(--white);
+      border: 1px solid var(--rose);
+      color: var(--rose-dark);
+    }
+
+    /* buttons */
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 15px 20px;
+      border-radius: 14px;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-ja);
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+      text-decoration: none;
+      margin: 12px 0;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity .15s, transform .1s;
+    }
+
+    .btn:active { opacity: .82; transform: scale(.98); }
+    .btn-rose   { background: var(--rose); color: var(--white); }
+    .btn-green  { background: #4A9E68;     color: var(--white); }
+
+    /* tel */
+    .tel-link {
+      display: inline-block;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--rose);
+      text-decoration: none;
+      letter-spacing: .04em;
+      font-family: var(--font-en);
+      margin: 8px 0 16px;
+    }
+
+    /* dish */
+    .dish-item {
+      background: var(--rose-bg);
+      border-radius: 12px;
+      padding: 13px 16px;
+      margin: 7px 0;
+      font-size: 14px;
+      color: var(--black);
+    }
+
+    /* misc */
+    .note {
+      font-size: 12px;
+      color: var(--gray);
+      line-height: 1.7;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--rose-light);
+      margin: 18px 0;
+    }
+
+    .hl-box {
+      background: var(--rose-bg);
+      border-radius: 14px;
+      padding: 16px;
+      margin: 10px 0 18px;
+    }
+
+    .artist-card {
+      border-left: 3px solid var(--rose);
+      padding-left: 14px;
+      margin: 14px 0;
+    }
+
+    .artist-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--black);
+      margin-bottom: 3px;
+    }
+
+    .artist-role {
+      font-size: 12px;
+      color: var(--gray);
+      margin-bottom: 8px;
+    }
+
+    .artist-desc {
+      font-size: 13px;
+      color: #444;
+      line-height: 1.75;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: var(--rose-light);
+      color: var(--rose-dark);
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+
+    <!-- ── HOME ── -->
+    <div id="pageHome">
+      <div class="hero" role="img" aria-label="TSUBAKIMORI HOTEL 館内"></div>
+
+      <div class="hotel-info">
+        <h1 class="hotel-name">TSUBAKIMORI HOTEL</h1>
+        <p class="hotel-address">1-21-32 Tsubakimori, Chuo-ku, Chiba-shi, Chiba 260-0042, Japan</p>
+      </div>
+
+      <div class="menu-section">
+        <div class="menu-grid" id="menuGrid" role="list"></div>
+      </div>
+    </div>
+
+    <!-- ── DETAIL PANEL ── -->
+    <div class="detail-panel" id="detailPanel" role="dialog" aria-modal="true">
+      <div class="detail-header">
+        <button class="back-btn" id="backBtn" aria-label="前の画面に戻る">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+        </button>
+        <span class="detail-title-text" id="detailTitle"></span>
+      </div>
+      <div class="detail-body" id="detailBody"></div>
+    </div>
+
+  </div><!-- /.app -->
+
+  <script>
+  (function () {
+    'use strict';
+
+    /* ========================================================
+       SVG ICONS  (viewBox 0 0 24 24, stroke="currentColor")
+    ======================================================== */
+    var ICONS = [
+      /* 0 初めに — person */
+      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-5.5 16-5.5 16 0"/></svg>',
+
+      /* 1 アート＆ミュージック — music notes */
+      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+
+      /* 2 Wi-Fi */
+      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="19.5" r="1.5" fill="currentColor" stroke="none"/><path d="M9 16a4.24 4.24 0 0 1 6 0"/><path d="M5.5 12.5a9.5 9.5 0 0 1 13 0"/><path d="M2 9a15 15 0 0 1 20 0"/></svg>',
+
+      /* 3 チェックイン/アウト — door + arrow */
+      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="13" height="18" rx="2"/><path d="M15 8h6l-2.5 4 2.5 4h-6"/><circle cx="9" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg>',
+
+      /* 4 館内のご案内 — building grid */
+      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/><line x1="2" y1="16" x2="22" y2="16"/><line x1="9" y1="9" x2="9" y2="22"/></svg>',
+
+      /* 5 貸出備品/アメニティ — hanger */
+      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4a3 3 0 0 1 3 3"/><path d="M15 7l-3 3L3 17h18L12 10 9 7"/></svg>',
+
+      /* 6 レストラン/バー — fork & knife */
+      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="2" x2="8" y2="22"/><path d="M5 2v7h6V2"/><line x1="17" y1="2" x2="17" y2="22"/><path d="M14 7a3 3 0 0 0 6 0V2"/></svg>',
+
+      /* 7 朝食 — coffee cup */
+      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3c0 0 1 1.5 0 2.5S6 8 8 9"/><path d="M13 3c0 0 1 1.5 0 2.5S11 8 13 9"/><path d="M5 11h14v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-5h1z"/><path d="M19 13h1a2 2 0 1 1 0 4h-1"/><line x1="2" y1="22" x2="22" y2="22"/></svg>',
+
+      /* 8 ルームサービス — dome cover */
+      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 18 0"/><rect x="2" y="12" width="20" height="2.5" rx="1.25"/><line x1="12" y1="12" x2="12" y2="8.5"/><circle cx="12" cy="7.5" r="1.5" fill="currentColor" stroke="none"/><line x1="2" y1="20" x2="22" y2="20"/></svg>',
+
+      /* 9 近隣MAP — map pin */
+      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 13 8 13s8-7 8-13a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+
+      /* 10 宿泊規約 — document */
+      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg>',
+
+      /* 11 口コミ — star */
+      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+    ];
+
+    /* ========================================================
+       MENU DATA
+    ======================================================== */
+    var MENU = [
+      { label: '初めに',               content: buildIntro()        },
+      { label: 'アート＆ミュージック', content: buildArt()          },
+      { label: 'Wi-Fi',                content: buildWifi()         },
+      { label: 'チェックイン／\nアウト', content: buildCIO()        },
+      { label: '館内のご案内',          content: buildFloor()       },
+      { label: '貸出備品／\nアメニティ', content: buildAmenity()    },
+      { label: 'レストラン／バー',      content: buildRestaurant()  },
+      { label: '朝食',                  content: buildBreakfast()   },
+      { label: 'ルームサービス',        content: buildRoomService() },
+      { label: '近隣MAP',               content: buildMap()         },
+      { label: '宿泊規約',              content: buildRules()       },
+      { label: '口コミ',                content: buildReview()      }
+    ];
+
+    /* ========================================================
+       CONTENT BUILDERS
+    ======================================================== */
+    function buildIntro() {
+      return (
+        '<p class="dc-concept-en">concept</p>' +
+        '<h2 class="dc-h1">Unusual Usual</h2>' +
+        '<div class="dc-concept-body">' +
+          '<p>特別で、贅沢な、非日常な日常を。</p>' +
+          '<p>休みをとって、旅に出る。<br>' +
+             '時間に追われ、予定に追われ、マストに追われる日々から距離をとるために。</p>' +
+          '<p>今を生きる私たちが思う贅沢とは、余白。<br>' +
+             '時間の余白。空間の余白。何もないという価値。<br>' +
+             '余白の中に、ありのままの自分を置ける、特別感。</p>' +
+          '<p>千葉県千葉市、千葉公園周辺。通称ネバーランド。<br>' +
+             'ここは観光地ではありません。<br>' +
+             'ここで暮らす人々の、ごく日常がある場所。</p>' +
+          '<p>旅を、すごい日々にするのではなく、いい日々にする。<br>' +
+             '特別で、贅沢な、非日常な日常を、私たちはつくります。</p>' +
+        '</div>'
+      );
+    }
+
+    function buildArt() {
+      return (
+        '<h3 class="dc-section-title">Art</h3>' +
+        '<div class="artist-card">' +
+          '<p class="artist-name">Benny Brankovic</p>' +
+          '<p class="artist-role">マルチクリエイター</p>' +
+          '<div class="link-row">' +
+            '<a class="link-chip" href="https://www.instagram.com/benny_brankovic/" target="_blank" rel="noopener">Instagram</a>' +
+            '<a class="link-chip link-chip-pdf" href="https://drive.google.com/file/d/1cd5mG_9meGUP-i1M6RF0ETf6IgeFV13D/view?usp=sharing" target="_blank" rel="noopener">アーティスト紹介 PDF</a>' +
+          '</div>' +
+        '</div>' +
+        '<h3 class="dc-section-title">Music</h3>' +
+        '<div class="artist-card">' +
+          '<p class="artist-name">HIROSHI WATANABE</p>' +
+          '<p class="artist-role">サウンドクリエイター</p>' +
+          '<p class="artist-desc">大阪関西万博「ウォータープラザ」エリアのサウンドスケープ制作者。千葉公園の自然と呼応する"音の景色"として館内BGMを設計。全8エピソードが時間帯ごとに変化します。</p>' +
+          '<div class="link-row">' +
+            '<a class="link-chip" href="https://www.instagram.com/hw_aka_kaito/" target="_blank" rel="noopener">Instagram</a>' +
+            '<a class="link-chip link-chip-pdf" href="https://drive.google.com/drive/folders/1YvbxIghXSYnE2ogZQm5w1iif9mdD3uwE" target="_blank" rel="noopener">音源フォルダ</a>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
+    function buildWifi() {
+      return (
+        '<div class="wifi-card">' +
+          '<div class="wifi-row">' +
+            '<p class="wifi-lbl">SSID</p>' +
+            '<p class="wifi-val">TSUBAKIMORI_Hotel</p>' +
+          '</div>' +
+          '<div class="wifi-divider"></div>' +
+          '<div class="wifi-row">' +
+            '<p class="wifi-lbl">PASSWORD</p>' +
+            '<p class="wifi-val">tsubakimori</p>' +
+          '</div>' +
+        '</div>' +
+        '<p class="note">ご不明な点はフロントまでお気軽にお申し付けください。</p>'
+      );
+    }
+
+    function buildCIO() {
+      return (
+        '<div class="cio-grid">' +
+          '<div class="cio-box">' +
+            '<p class="cio-lbl">チェックイン</p>' +
+            '<p class="cio-time">15:00</p>' +
+            '<p class="cio-note">以降</p>' +
+          '</div>' +
+          '<div class="cio-box">' +
+            '<p class="cio-lbl">チェックアウト</p>' +
+            '<p class="cio-time">11:00</p>' +
+            '<p class="cio-note">まで<br>（スイートは 12:00）</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="cio-en">' +
+          'Check-in: From 15:00<br>' +
+          'Check-out: By 11:00&nbsp;&nbsp;(Suite: by 12:00)' +
+        '</div>' +
+        '<p class="note">アーリーチェックイン・レイトチェックアウトはご相談ください。</p>'
+      );
+    }
+
+    function buildFloor() {
+      return (
+        '<h3 class="dc-section-title">フロアガイド</h3>' +
+        '<ul class="floor-list">' +
+          '<li class="floor-item"><span class="floor-f">8F</span><span class="floor-desc">客室</span></li>' +
+          '<li class="floor-item"><span class="floor-f">7F</span><span class="floor-desc">客室</span></li>' +
+          '<li class="floor-item"><span class="floor-f">6F</span><span class="floor-desc">客室</span></li>' +
+          '<li class="floor-item"><span class="floor-f">5F</span><span class="floor-desc">客室</span></li>' +
+          '<li class="floor-item"><span class="floor-f">4F</span><span class="floor-desc">レセプション／ラウンジ／給水所／Bar 西陽</span></li>' +
+          '<li class="floor-item"><span class="floor-f">3F</span><span class="floor-desc">客室</span></li>' +
+          '<li class="floor-item"><span class="floor-f">2F</span><span class="floor-desc">客室／サブエントランス</span></li>' +
+          '<li class="floor-item"><span class="floor-f">1F</span><span class="floor-desc">レストラン Call me Anne／喫煙スペース</span></li>' +
+        '</ul>' +
+
+        '<h3 class="dc-section-title">キーカード</h3>' +
+        '<p class="dc-p">館内移動・外出時は常に携帯ください。ラウンジ、給水所、エレベーター、夜間出入口に必要です。</p>' +
+
+        '<h3 class="dc-section-title">ハウスフォン</h3>' +
+        '<p class="dc-p">各階エレベーター横に設置しています。</p>' +
+
+        '<h3 class="dc-section-title">館内ルール</h3>' +
+        '<ul class="dc-ul">' +
+          '<li>ナイトウェア・スリッパでのロビー・レストラン・バーへの移動はご遠慮ください</li>' +
+          '<li>館内およびバルコニーは完全禁煙。喫煙は1階エントランス横の専用スペースへ</li>' +
+        '</ul>' +
+
+        '<h3 class="dc-section-title">連泊時の客室清掃</h3>' +
+        '<div class="info-box">' +
+          '<div class="info-row">' +
+            '<span class="info-lbl">清掃希望の場合</span>' +
+            '<span class="info-val">ドア外側に「清掃してください」カードを掲示</span>' +
+          '</div>' +
+          '<div class="info-row">' +
+            '<span class="info-lbl">清掃時間</span>' +
+            '<span class="info-val">9:00〜13:00</span>' +
+          '</div>' +
+          '<div class="info-row">' +
+            '<span class="info-lbl">リネン交換</span>' +
+            '<span class="info-val">環境保護のため交換なし<br><span style="font-size:11px;color:#888">（ご希望はレセプションへ）</span></span>' +
+          '</div>' +
+        '</div>' +
+
+        '<h3 class="dc-section-title">照明</h3>' +
+        '<p class="dc-p">入口スイッチ + ベッドサイドスイッチ</p>' +
+
+        '<h3 class="dc-section-title">非常口</h3>' +
+        '<p class="dc-p">各フロア廊下に表示があります。1階・2階より屋外避難が可能です。</p>'
+      );
+    }
+
+    function buildAmenity() {
+      return (
+        '<h3 class="dc-section-title">客室アメニティ</h3>' +
+        '<div class="tag-wrap">' +
+          '<span class="tag">バニティキット</span>' +
+          '<span class="tag">歯ブラシ</span>' +
+        '</div>' +
+
+        '<h3 class="dc-section-title">レセプションで無料貸出</h3>' +
+        '<p class="note" style="margin-bottom:10px">数に限りがございます。あらかじめご了承ください。</p>' +
+        '<div class="tag-wrap">' +
+          '<span class="tag">携帯充電ケーブル</span>' +
+          '<span class="tag">コンセント変換プラグ</span>' +
+          '<span class="tag">プロジェクター</span>' +
+          '<span class="tag">レコードプレイヤー</span>' +
+          '<span class="tag">アイロン・アイロン台</span>' +
+          '<span class="tag">シャワーチェア</span>' +
+          '<span class="tag">爪切り</span>' +
+          '<span class="tag">ヘアアイロン</span>' +
+          '<span class="tag">シューズドライヤー</span>' +
+          '<span class="tag">加湿空気清浄機</span>' +
+          '<span class="tag">ヘアブラシ</span>' +
+          '<span class="tag">レザー</span>' +
+        '</div>' +
+
+        '<h3 class="dc-section-title">レディースアメニティ（有料）</h3>' +
+        '<div class="hl-box">' +
+          '<p class="dc-p"><strong>KOSE「雪肌精」4点セット</strong><br>クレンジング・洗顔料・化粧水・乳液</p>' +
+          '<p class="dc-p" style="margin-bottom:0">¥200（税込）<br><span class="note">レセプションにてキャッシュレス決済のみ</span></p>' +
+        '</div>'
+      );
+    }
+
+    function buildRestaurant() {
+      return (
+        '<h3 class="dc-section-title">館内</h3>' +
+
+        '<div class="venue">' +
+          '<p class="venue-name">Call me Anne</p>' +
+          '<p class="venue-desc">1F　オールデイビストロ</p>' +
+          '<div class="link-row">' +
+            '<a class="link-chip" href="https://www.instagram.com/bistro_call_me_anne/" target="_blank" rel="noopener">Instagram</a>' +
+            '<a class="link-chip" href="https://maps.app.goo.gl/P2VDRfY2Mee4Deg2A" target="_blank" rel="noopener">Google Map</a>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="venue">' +
+          '<p class="venue-name">Bar 西陽</p>' +
+          '<p class="venue-desc">4F　カフェ＆バー</p>' +
+          '<div class="link-row">' +
+            '<a class="link-chip" href="https://www.instagram.com/seiyou2026/" target="_blank" rel="noopener">Instagram</a>' +
+            '<a class="link-chip" href="https://maps.app.goo.gl/DRt2ZVwFTn47yK1n6" target="_blank" rel="noopener">Google Map</a>' +
+          '</div>' +
+        '</div>' +
+
+        '<h3 class="dc-section-title">近隣姉妹店</h3>' +
+
+        '<div class="venue">' +
+          '<p class="venue-name">椿森コムナ</p>' +
+          '<p class="venue-desc">Cafe &amp; stay</p>' +
+          '<div class="link-row">' +
+            '<a class="link-chip" href="https://www.instagram.com/tsubakimori_komuna/" target="_blank" rel="noopener">Instagram</a>' +
+            '<a class="link-chip" href="https://maps.app.goo.gl/nmonn8bTKLQrrNk88" target="_blank" rel="noopener">Google Map</a>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="venue">' +
+          '<p class="venue-name">the RECORDS</p>' +
+          '<p class="venue-desc">複合商業施設</p>' +
+          '<div class="link-row">' +
+            '<a class="link-chip" href="https://www.instagram.com/the_records_1986/" target="_blank" rel="noopener">Instagram</a>' +
+            '<a class="link-chip" href="https://maps.app.goo.gl/5DTwxPtJeGc8YA9a9" target="_blank" rel="noopener">Google Map</a>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="venue">' +
+          '<p class="venue-name">Bakery トイット</p>' +
+          '<p class="venue-desc">ベーカリー</p>' +
+          '<div class="link-row">' +
+            '<a class="link-chip" href="https://maps.app.goo.gl/VobJA5Lvxv7eMxi86" target="_blank" rel="noopener">Google Map</a>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="venue">' +
+          '<p class="venue-name">the RECORDS Diner</p>' +
+          '<p class="venue-desc">貸切宴会・パーティー</p>' +
+          '<div class="link-row">' +
+            '<a class="link-chip" href="https://www.instagram.com/the_records_diner/" target="_blank" rel="noopener">Instagram</a>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="venue">' +
+          '<p class="venue-name">都鮨</p>' +
+          '<p class="venue-desc">寿司屋</p>' +
+          '<div class="link-row">' +
+            '<a class="link-chip" href="https://www.instagram.com/miyako__zushi/" target="_blank" rel="noopener">Instagram</a>' +
+            '<a class="link-chip" href="https://maps.app.goo.gl/yXazCoyFsQLRiAqz5" target="_blank" rel="noopener">Google Map</a>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
+    function buildBreakfast() {
+      return (
+        '<div class="hl-box">' +
+          '<p class="dc-p" style="margin-bottom:8px"><strong>Call me Anne</strong>（1F）</p>' +
+          '<div class="info-box" style="margin:0">' +
+            '<div class="info-row"><span class="info-lbl">営業時間</span><span class="info-val">7:00〜10:00</span></div>' +
+            '<div class="info-row"><span class="info-lbl">ラストオーダー</span><span class="info-val">9:30</span></div>' +
+          '</div>' +
+        '</div>' +
+        '<p class="dc-p">朝食付きプランのお客様は1Fレストラン「Call me Anne」にてお召し上がりください。</p>' +
+        '<a class="btn btn-rose" href="https://drive.google.com/file/d/1YxEhseROgNhmEuueSADRTA4XRBg_sH7S/view?usp=sharing" target="_blank" rel="noopener">メニューを見る（PDF）</a>'
+      );
+    }
+
+    function buildRoomService() {
+      return (
+        '<div class="hl-box">' +
+          '<p class="note" style="margin-bottom:8px">宿泊者限定・ディナー限定</p>' +
+          '<div class="info-box" style="margin:0">' +
+            '<div class="info-row"><span class="info-lbl">お届け時間</span><span class="info-val">17:00〜22:00</span></div>' +
+            '<div class="info-row"><span class="info-lbl">ラストオーダー</span><span class="info-val">21:00</span></div>' +
+            '<div class="info-row"><span class="info-lbl">お支払い</span><span class="info-val"><span class="badge">PayPay のみ</span></span></div>' +
+          '</div>' +
+        '</div>' +
+
+        '<h3 class="dc-section-title">ご注文</h3>' +
+        '<p class="dc-p">お電話でご注文ください。</p>' +
+        '<p><a class="tel-link" href="tel:07056114530">070-5611-4530</a></p>' +
+
+        '<h3 class="dc-section-title">シェフおすすめ</h3>' +
+        '<div class="dish-item">子持ちヤリイカの香草バターソテー</div>' +
+        '<div class="dish-item">牛ウチモモのロースト 赤ワインソース</div>' +
+        '<div class="dish-item">渡り蟹のトマトクリームパスタ</div>' +
+
+        '<div class="divider"></div>' +
+        '<p class="note">「OKAMOCHI（おかもち）」に入れてお届けします。<br>温かいままお部屋でお楽しみください。</p>' +
+
+        '<div class="divider"></div>' +
+        '<p class="dc-subsection">Call me Anne 営業時間</p>' +
+        '<div class="info-box">' +
+          '<div class="info-row"><span class="info-lbl">Morning</span><span class="info-val">7:00〜10:00</span></div>' +
+          '<div class="info-row"><span class="info-lbl">Lunch</span><span class="info-val">11:00〜16:00</span></div>' +
+          '<div class="info-row"><span class="info-lbl">Dinner</span><span class="info-val">17:00〜22:00</span></div>' +
+        '</div>'
+      );
+    }
+
+    function buildMap() {
+      return (
+        '<p class="dc-p">千葉公園を望む千葉市中央区椿森エリアに位置します。<br>JR 千葉駅・千葉みなと駅など各方面からアクセス可能です。</p>' +
+        '<a class="btn btn-green" href="https://maps.app.goo.gl/P2VDRfY2Mee4Deg2A" target="_blank" rel="noopener">Google マップで見る</a>' +
+        '<div class="hl-box" style="margin-top:16px">' +
+          '<p class="dc-p" style="margin-bottom:0"><strong>TSUBAKIMORI HOTEL</strong><br>千葉県千葉市中央区椿森1-21-32<br>〒260-0042</p>' +
+        '</div>'
+      );
+    }
+
+    function buildRules() {
+      return (
+        '<p class="dc-p">ご宿泊にあたっての宿泊規約をご確認ください。</p>' +
+        '<a class="btn btn-rose" href="https://drive.google.com/file/d/1EUPvn0UrUlTdczm3vbTpZ1eckJV1Nuhv/view?usp=sharing" target="_blank" rel="noopener">宿泊規約を見る（PDF）</a>'
+      );
+    }
+
+    function buildReview() {
+      return (
+        '<p class="dc-p">TSUBAKIMORI HOTEL でのご滞在はいかがでしたか？<br>皆さまの口コミが次のゲストの参考になります。</p>' +
+        '<a class="btn btn-rose" href="#" target="_blank" rel="noopener">口コミを書く（Google レビュー）</a>' +
+        '<p class="note" style="text-align:center;margin-top:6px">Google アカウントが必要です</p>'
+      );
+    }
+
+    /* ========================================================
+       RENDER CARDS
+    ======================================================== */
+    var grid = document.getElementById('menuGrid');
+    MENU.forEach(function (item, i) {
+      var btn = document.createElement('button');
+      btn.className = 'menu-card' + (i === 0 ? ' selected' : '');
+      btn.setAttribute('role', 'listitem');
+      btn.setAttribute('aria-label', item.label.replace('\n', ''));
+      btn.innerHTML = ICONS[i] +
+        '<span class="card-label">' + item.label.replace('\n', '<br>') + '</span>';
+      btn.addEventListener('click', function () { openPanel(i); });
+      grid.appendChild(btn);
+    });
+
+    /* ========================================================
+       NAVIGATION
+    ======================================================== */
+    var panel   = document.getElementById('detailPanel');
+    var titleEl = document.getElementById('detailTitle');
+    var bodyEl  = document.getElementById('detailBody');
+    var backBtn = document.getElementById('backBtn');
+    var isOpen  = false;
+
+    function openPanel(idx) {
+      var item = MENU[idx];
+      titleEl.textContent = item.label.replace('\n', '');
+      bodyEl.innerHTML    = item.content;
+      bodyEl.scrollTop    = 0;
+      panel.classList.add('open');
+      document.body.classList.add('panel-open');
+      isOpen = true;
+      try { history.pushState({ panelIdx: idx }, '', '#' + idx); } catch (e) {}
+      backBtn.focus();
+    }
+
+    function closePanel() {
+      panel.classList.remove('open');
+      document.body.classList.remove('panel-open');
+      isOpen = false;
+    }
+
+    backBtn.addEventListener('click', function () {
+      if (history.state && history.state.panelIdx !== undefined) {
+        history.back();
+      } else {
+        closePanel();
+      }
+    });
+
+    window.addEventListener('popstate', function (e) {
+      if (isOpen && (!e.state || e.state.panelIdx === undefined)) {
+        closePanel();
+      }
+    });
+
+    /* Handle direct hash on load */
+    (function () {
+      var hash = location.hash.replace('#', '');
+      var idx  = parseInt(hash, 10);
+      if (!isNaN(idx) && idx >= 0 && idx < MENU.length) {
+        openPanel(idx);
+      }
+    })();
+
+  })();
+  </script>
+</body>
+</html>

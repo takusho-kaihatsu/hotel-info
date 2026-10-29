@@ -534,6 +534,12 @@
       margin: 8px 0 16px;
     }
 
+    .tel-inline {
+      color: var(--rose-dark);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
     /* dish */
     .dish-item {
       background: var(--rose-bg);
@@ -1032,6 +1038,7 @@
     var bodyEl  = document.getElementById('detailBody');
     var backBtn = document.getElementById('backBtn');
     var isOpen  = false;
+    var openIdx = -1;
 
     function openPanel(idx) {
       var item = MENU[idx];
@@ -1040,7 +1047,8 @@
       bodyEl.scrollTop    = 0;
       panel.classList.add('open');
       document.body.classList.add('panel-open');
-      isOpen = true;
+      isOpen  = true;
+      openIdx = idx;
       try { history.pushState({ panelIdx: idx }, '', '#' + idx); } catch (e) {}
       backBtn.focus();
     }
@@ -1048,7 +1056,8 @@
     function closePanel() {
       panel.classList.remove('open');
       document.body.classList.remove('panel-open');
-      isOpen = false;
+      isOpen  = false;
+      openIdx = -1;
     }
 
     backBtn.addEventListener('click', function () {
@@ -1064,6 +1073,389 @@
         closePanel();
       }
     });
+
+    /* ========================================================
+       LIVE DATA — スプレッドシート（GAS 経由）の内容で各ページを差し替える。
+       起動時は「最後に取得できたデータ全体（localStorage）」を先に当て、裏で最新を取得する。
+       どちらのデータでも組み立てられなかったページは、上の組み込み内容のまま。
+    ======================================================== */
+    var DATA_URL  = 'https://script.google.com/macros/s/AKfycbwO-l6e3Ms6ojPGq8clRR6WnyUt5SERaCGqARF951fVkii5zHW6pjVhkrUYSirLArI/exec?format=json';
+    var CACHE_KEY = 'tsubakimori-sheets-v1';
+    var FETCH_TIMEOUT_MS = 8000;
+
+    var SOURCES = [
+      { idx: 0,  sheet: 'コンセプト',                   build: liveIntro },
+      { idx: 1,  sheet: 'art&music',                    build: liveArt },
+      { idx: 2,  sheet: 'Wi-Fi',                        build: liveWifi },
+      { idx: 3,  sheet: 'チェックイン／チェックアウト', build: liveCIO },
+      { idx: 4,  sheet: '館内のご案内',                 build: liveFloor },
+      { idx: 5,  sheet: '貸出備品／アメニティ',         build: function (r) { return liveGeneric(r, '詳しく見る', false); } },
+      { idx: 6,  sheet: 'レストラン／バー',             build: liveRestaurant },
+      { idx: 7,  sheet: '朝食',                         build: function (r) { return liveGeneric(r, 'メニューを見る', false); } },
+      { idx: 8,  sheet: 'ルームサービス',               build: function (r) { return liveGeneric(r, '詳しく見る', false); } },
+      { idx: 9,  sheet: '近隣MAP',                      build: function (r) { return liveGeneric(r, 'MAPを見る', false); } },
+      { idx: 10, sheet: '宿泊規約',                     build: function (r) { return liveGeneric(r, '宿泊規約を見る（PDF）', true); } },
+      { idx: 11, sheet: '口コミ',                       build: function (r) { return liveGeneric(r, '口コミを書く（Google レビュー）', true); } }
+    ];
+
+    /* ---- helpers ---- */
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    function cellText(v) {
+      return String(v == null ? '' : v).replace(/\r\n?/g, '\n').trim();
+    }
+
+    function rowTexts(row) { return row.map(cellText); }
+
+    function cellsOf(rows) {
+      var out = [];
+      rows.forEach(function (row) {
+        rowTexts(row).forEach(function (t) { if (t) out.push(t); });
+      });
+      return out;
+    }
+
+    function firstNonEmpty(list) {
+      for (var i = 0; i < list.length; i++) if (list[i]) return list[i];
+      return '';
+    }
+
+    function isUrl(s) { return /^https?:\/\/[^\s"'<>]+$/i.test(s); }
+
+    function isDriveFile(url)   { return /drive\.google\.com\/file\//i.test(url); }
+    function isDriveFolder(url) { return /drive\.google\.com\/drive\/folders\//i.test(url); }
+
+    function linkLabel(url, hint) {
+      if (/instagram\.com/i.test(url)) return 'Instagram';
+      if (/maps\.app\.goo\.gl|google\.[a-z.]+\/maps/i.test(url)) return 'Google Map';
+      if (hint && !isUrl(hint) && hint.indexOf('\n') < 0) return hint;
+      return 'Webサイト';
+    }
+
+    function chip(url, label, outlined) {
+      return '<a class="link-chip' + (outlined ? ' link-chip-pdf' : '') + '" href="' + esc(url) +
+             '" target="_blank" rel="noopener">' + esc(label) + '</a>';
+    }
+
+    function button(url, label) {
+      return '<a class="btn btn-rose" href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(label) + '</a>';
+    }
+
+    // 前後が数字・ハイフンでないものだけ（「2025-03-1234」などは電話番号にしない）
+    var PHONE_RE = /(?:^|[^\d-])(0\d{1,4}-\d{1,4}-\d{3,4})(?![\d-])/;
+
+    function telHref(phone) { return 'tel:' + phone.replace(/-/g, ''); }
+
+    /* セル内の文章を、見出し・小見出し・注記・タグ・段落に組み立てる */
+    function renderText(text) {
+      var html = '', para = [];
+      function flush() {
+        if (para.length) { html += '<p class="dc-p">' + para.join('<br>') + '</p>'; para = []; }
+      }
+      text.split('\n').forEach(function (raw) {
+        var line = raw.trim();
+        var phone, items;
+        if (!line) { flush(); return; }
+        if (line.charAt(0) === '【' && line.indexOf('】') > 0 && line.length <= 40) {
+          flush();
+          html += '<h3 class="dc-section-title">' + esc(line.replace(/[【】]/g, ' ').replace(/\s+/g, ' ').trim()) + '</h3>';
+          return;
+        }
+        if (line.charAt(0) === '■') {
+          flush();
+          html += '<p class="dc-subsection">' + esc(line.replace(/^■\s*/, '')) + '</p>';
+          return;
+        }
+        if (line.charAt(0) === '※') {
+          flush();
+          html += '<p class="note">' + esc(line) + '</p>';
+          return;
+        }
+        items = line.split(/／|\s{2,}/).map(function (s) { return s.trim(); }).filter(Boolean);
+        if ((line.match(/／/g) || []).length >= 2 && items.length >= 3) {
+          flush();
+          html += '<div class="tag-wrap">' + items.map(function (s) {
+            return '<span class="tag">' + esc(s) + '</span>';
+          }).join('') + '</div>';
+          return;
+        }
+        phone = line.match(PHONE_RE);
+        if (phone && /^(TEL|電話)/i.test(line) && line.replace(/^(TEL|電話(番号)?)\s*[：:]?\s*/i, '') === phone[1]) {
+          flush();
+          html += '<p><a class="tel-link" href="' + telHref(phone[1]) + '">' + esc(phone[1]) + '</a></p>';
+          return;
+        }
+        if (phone) {
+          var at = line.indexOf(phone[1], phone.index);
+          para.push(esc(line.slice(0, at)) +
+            '<a class="tel-inline" href="' + telHref(phone[1]) + '">' + esc(phone[1]) + '</a>' +
+            esc(line.slice(at + phone[1].length)));
+          return;
+        }
+        para.push(esc(line));
+      });
+      flush();
+      return html;
+    }
+
+    function isShortLabel(s) { return s.indexOf('\n') < 0 && s.length <= 40; }
+
+    function isHeading(s) {
+      return s.indexOf('\n') < 0 && s.length <= 30 &&
+             !/^[【■※]/.test(s) && !/[。．.!！?？]$/.test(s) && !/\d{1,2}:\d{2}/.test(s);
+    }
+
+    /* セルを上から順に：URL→ボタン、「〇〇はこちら」+URL→ラベル付きボタン、短い1行→見出し、他→本文 */
+    function renderCells(cells, defaultLabel) {
+      var html = '', links = 0, body = 0, t;
+      for (var i = 0; i < cells.length; i++) {
+        var c = cells[i], next = cells[i + 1];
+        if (isUrl(c)) { html += button(c, defaultLabel); links++; continue; }
+        if (next && isUrl(next) && isShortLabel(c)) {
+          html += button(next, c.replace(/は(こちら|コチラ)[。！!]?$/, ''));
+          links++; i++;
+          continue;
+        }
+        if (isHeading(c)) { html += '<h3 class="dc-section-title">' + esc(c) + '</h3>'; continue; }
+        t = renderText(c);
+        if (/class="(dc-p|tag-wrap|note|tel-link)"/.test(t)) body++;
+        html += t;
+      }
+      return { html: html, links: links, body: body };
+    }
+
+    /* ---- page builders（null を返すと、そのページは差し替えない） ---- */
+    function liveGeneric(rows, defaultLabel, needsLink) {
+      var r = renderCells(cellsOf(rows), defaultLabel);
+      // 見出しだけのページや、リンク必須のページにリンクが無いときは差し替えない
+      if (!(r.body + r.links) || (needsLink && !r.links)) return null;
+      return r.html;
+    }
+
+    function liveIntro(rows) {
+      var title = '', started = false, paras = [], para = [];
+      function flush() { if (para.length) { paras.push(para.join('<br>')); para = []; } }
+      rows.forEach(function (row) {
+        var c = rowTexts(row);
+        if (!started) {
+          for (var k = 0; k < c.length; k++) {
+            if (c[k].toLowerCase() === 'concept') { title = firstNonEmpty(c.slice(k + 1)); started = true; break; }
+          }
+          return;
+        }
+        var text = c.filter(Boolean).join('\n');
+        if (!text) { flush(); return; }
+        para.push(esc(text).replace(/\n/g, '<br>'));
+      });
+      flush();
+      if (!title || !paras.length) return null;
+      return '<p class="dc-concept-en">concept</p>' +
+             '<h2 class="dc-h1">' + esc(title) + '</h2>' +
+             '<div class="dc-concept-body"><p>' + paras.join('</p><p>') + '</p></div>';
+    }
+
+    function liveArt(rows) {
+      var sections = [], cur = null, artist = null, total = 0;
+      rows.forEach(function (row) {
+        var c = rowTexts(row);
+        if (/^(art|music)$/i.test(c[0] || '')) {
+          cur = { title: c[0], music: /^music$/i.test(c[0]), artists: [] };
+          sections.push(cur);
+          artist = null;
+          return;
+        }
+        if (!cur) return;
+        var urls  = c.filter(isUrl);
+        var texts = c.filter(function (t) { return t && !isUrl(t); });
+        if (c[1] && !isUrl(c[1])) {
+          artist = {
+            role: c[0] || '',
+            name: c[1],
+            links: urls,
+            desc: c.slice(2).filter(function (t) { return t && !isUrl(t); })
+          };
+          cur.artists.push(artist);
+          total++;
+          return;
+        }
+        if (!artist) return;
+        artist.links = artist.links.concat(urls);
+        artist.desc  = artist.desc.concat(texts);
+      });
+      if (!total) return null;
+      return sections.filter(function (s) { return s.artists.length; }).map(function (s) {
+        return '<h3 class="dc-section-title">' + esc(s.title) + '</h3>' + s.artists.map(function (a) {
+          var links = a.links.map(function (u) {
+            if (isDriveFile(u))   return chip(u, s.music ? '紹介 PDF' : 'アーティスト紹介 PDF', true);
+            if (isDriveFolder(u)) return chip(u, s.music ? '音源フォルダ' : '資料フォルダ', true);
+            return chip(u, linkLabel(u), false);
+          }).join('');
+          return '<div class="artist-card">' +
+                   '<p class="artist-name">' + esc(a.name) + '</p>' +
+                   (a.role ? '<p class="artist-role">' + esc(a.role) + '</p>' : '') +
+                   a.desc.map(function (d) {
+                     return '<p class="artist-desc">' + esc(d).replace(/\n/g, '<br>') + '</p>';
+                   }).join('') +
+                   (links ? '<div class="link-row">' + links + '</div>' : '') +
+                 '</div>';
+        }).join('');
+      }).join('');
+    }
+
+    function liveWifi(rows) {
+      var ssid = '', pass = '';
+      rows.forEach(function (row) {
+        var c = rowTexts(row);
+        for (var k = 0; k < c.length; k++) {
+          var key = c[k].replace(/[：:\s]/g, '').toUpperCase();
+          var val = firstNonEmpty(c.slice(k + 1));
+          if (!val) continue;
+          if (!ssid && (key === 'ID' || key === 'SSID')) ssid = val;
+          if (!pass && (key === 'PASS' || key === 'PASSWORD' || key === 'パスワード')) pass = val;
+        }
+      });
+      if (!ssid || !pass) return null;
+      return (
+        '<div class="wifi-card">' +
+          '<div class="wifi-row"><p class="wifi-lbl">SSID</p><p class="wifi-val">' + esc(ssid) + '</p></div>' +
+          '<div class="wifi-divider"></div>' +
+          '<div class="wifi-row"><p class="wifi-lbl">PASSWORD</p><p class="wifi-val">' + esc(pass) + '</p></div>' +
+        '</div>' +
+        '<p class="note">ご不明な点はフロントまでお気軽にお申し付けください。</p>'
+      );
+    }
+
+    function liveCIO(rows) {
+      var inText = '', outText = '';
+      cellsOf(rows).forEach(function (t) {
+        if (/【\s*CHECK\s*-?\s*IN\s*】/i.test(t)) inText = t;
+        else if (/【\s*CHECK\s*-?\s*OUT\s*】/i.test(t)) outText = t;
+      });
+      var inTime  = (inText.match(/\d{1,2}:\d{2}/) || [])[0];
+      var outTime = (outText.match(/\d{1,2}:\d{2}/) || [])[0];
+      if (!inTime || !outTime) return null;
+      var suite = (outText.match(/スイート[^\n]*?(\d{1,2}:\d{2})/) || [])[1];
+      return (
+        '<div class="cio-grid">' +
+          '<div class="cio-box"><p class="cio-lbl">チェックイン</p><p class="cio-time">' + esc(inTime) + '</p><p class="cio-note">以降</p></div>' +
+          '<div class="cio-box"><p class="cio-lbl">チェックアウト</p><p class="cio-time">' + esc(outTime) + '</p>' +
+            '<p class="cio-note">まで' + (suite ? '<br>（スイートは ' + esc(suite) + '）' : '') + '</p></div>' +
+        '</div>' +
+        renderText(inText) + renderText(outText)
+      );
+    }
+
+    function liveFloor(rows) {
+      var floors = [], rest = [], title = 'フロアガイド';
+      rows.forEach(function (row) {
+        var c = rowTexts(row);
+        if (/^B?\d+\s*F$/i.test(c[0] || '') && c[1]) {
+          floors.push({ f: c[0].replace(/\s+/g, '').toUpperCase(), desc: c[1] });
+          return;
+        }
+        c.forEach(function (t) { if (t) rest.push(t); });
+      });
+      if (!floors.length) return null;
+      rest = rest.filter(function (t) {
+        var m = t.match(/^【([^】]*フロア[^】]*)】$/);
+        if (m) { title = m[1].trim(); return false; }
+        return true;
+      });
+      return (
+        '<h3 class="dc-section-title">' + esc(title) + '</h3>' +
+        '<ul class="floor-list">' + floors.map(function (f) {
+          return '<li class="floor-item"><span class="floor-f">' + esc(f.f) + '</span><span class="floor-desc">' + esc(f.desc) + '</span></li>';
+        }).join('') + '</ul>' +
+        renderCells(rest, '詳しく見る').html
+      );
+    }
+
+    function liveRestaurant(rows) {
+      var html = '', venue = null, count = 0, linkCount = 0;
+      function close() {
+        if (!venue) return;
+        html += '<div class="venue">' +
+                  '<p class="venue-name">' + esc(venue.name) + '</p>' +
+                  (venue.desc ? '<p class="venue-desc">' + esc(venue.desc) + '</p>' : '') +
+                  (venue.links.length ? '<div class="link-row">' + venue.links.join('') + '</div>' : '') +
+                '</div>';
+        venue = null;
+      }
+      rows.forEach(function (row) {
+        var c = rowTexts(row);
+        var name = c[0] || '';
+        var links = [];
+        for (var k = 1; k < c.length; k++) {
+          if (isUrl(c[k])) links.push(chip(c[k], linkLabel(c[k], c[k - 1]), false));
+        }
+        var hasOther = c.slice(1).some(function (t) { return t; });
+        if (name && !hasOther) {
+          close();
+          html += '<h3 class="dc-section-title">' + esc(name.split('\n')[0]) + '</h3>';
+          return;
+        }
+        if (name) {
+          close();
+          venue = { name: name, desc: (c[1] && !isUrl(c[1])) ? c[1] : '', links: [] };
+          count++;
+        }
+        if (venue) { venue.links = venue.links.concat(links); linkCount += links.length; }
+      });
+      close();
+      // 店名はあってもリンクが1つも無いのは、シートの書き方が崩れているとみなす
+      return (count && linkCount) ? html : null;
+    }
+
+    /* ---- apply / load ---- */
+    function applyData(data) {
+      var sheets = data && data.sheets;
+      var applied = 0;
+      if (!sheets || typeof sheets !== 'object') return 0;
+      SOURCES.forEach(function (src) {
+        var rows = sheets[src.sheet];
+        if (!Array.isArray(rows)) return;
+        try {
+          var html = src.build(rows.map(function (r) { return Array.isArray(r) ? r : []; }));
+          if (html) { MENU[src.idx].content = html; applied++; }
+        } catch (e) { /* このページは今の内容のまま */ }
+      });
+      return applied;
+    }
+
+    function applyCached() {
+      try {
+        var text = localStorage.getItem(CACHE_KEY);
+        if (text) applyData(JSON.parse(text));
+      } catch (e) {}
+    }
+
+    function loadLive() {
+      if (!window.fetch) return;
+      var ctrl  = window.AbortController ? new AbortController() : null;
+      var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, FETCH_TIMEOUT_MS) : null;
+      fetch(DATA_URL, ctrl ? { signal: ctrl.signal } : undefined)
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.text();
+        })
+        .then(function (text) {
+          if (!applyData(JSON.parse(text))) return;
+          try { localStorage.setItem(CACHE_KEY, text); } catch (e) {}
+          // 開いたばかり（スクロール前）のページだけ、その場で新しい内容に替える
+          if (isOpen && openIdx >= 0 && bodyEl.scrollTop === 0) {
+            bodyEl.innerHTML = MENU[openIdx].content;
+          }
+        })
+        .catch(function () { /* 通信できないときは今の内容のまま */ })
+        .then(function () { if (timer) clearTimeout(timer); });
+    }
+
+    applyCached();
+    loadLive();
 
     /* Handle direct hash on load */
     (function () {

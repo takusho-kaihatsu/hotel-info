@@ -4,10 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>TSUBAKIMORI HOTEL</title>
-  <!-- ヘッダー写真の時間帯（日本時間）を描画前に決める。読み込むのは今の時間帯の1枚だけ -->
+  <!-- ヘッダー写真：最初の1枚は日本時間の時間帯で描画前に決め、その後は数秒ごとにスライドショーで切り替える -->
   <script id="heroTime">
   (function () {
     var root = document.documentElement;
+    var ORDER = ['day', 'evening', 'night'];
+    var INTERVAL_MS = 5000;
+    var FADE_MS = 1200;   // CSS の .hero-fade の transition と合わせる
     var LABELS = {
       day:     'TSUBAKIMORI HOTEL ラウンジ',
       evening: 'TSUBAKIMORI HOTEL アーチの先のレセプション',
@@ -25,13 +28,6 @@
       var el = document.getElementById('hero');
       if (el) el.setAttribute('aria-label', LABELS[root.getAttribute('data-hero')] || LABELS.day);
     }
-    function refresh() {
-      var s = slot();
-      if (s === root.getAttribute('data-hero')) return;
-      var img = new Image();
-      img.onload = img.onerror = function () { root.setAttribute('data-hero', s); label(); };
-      img.src = src(s);
-    }
 
     var first = slot();
     root.setAttribute('data-hero', first);
@@ -41,11 +37,40 @@
       document.head.appendChild(link);
     } catch (e) {}
 
-    document.addEventListener('DOMContentLoaded', label);
-    document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible') refresh();
-    });
-    window.addEventListener('pageshow', function (e) { if (e.persisted) refresh(); });
+    // 次の写真を読み込んでから上の層に重ねてフェードし、終わったら下の層（data-hero）を差し替える
+    function startSlideshow() {
+      label();
+      var hero = document.getElementById('hero');
+      if (!hero) return;
+      try {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      } catch (e) {}
+      var fade = document.createElement('div');
+      fade.className = 'hero-fade';
+      fade.setAttribute('aria-hidden', 'true');
+      hero.appendChild(fade);
+      var busy = false;
+      setInterval(function () {
+        if (busy || document.hidden) return;
+        var next = ORDER[(ORDER.indexOf(root.getAttribute('data-hero')) + 1) % ORDER.length];
+        var img = new Image();
+        busy = true;
+        img.onload = function () {
+          fade.style.backgroundImage = 'url(' + src(next) + ')';
+          void fade.offsetWidth;   // 透明な状態を確定させてからフェードを始める（これが無いと切り替えが瞬時になることがある）
+          fade.classList.add('is-on');
+          setTimeout(function () {
+            root.setAttribute('data-hero', next);
+            label();
+            fade.classList.remove('is-on');
+            busy = false;
+          }, FADE_MS);
+        };
+        img.onerror = function () { busy = false; };
+        img.src = src(next);
+      }, INTERVAL_MS);
+    }
+    document.addEventListener('DOMContentLoaded', startSlideshow);
   })();
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -111,14 +136,26 @@
       overflow-x: hidden;
     }
 
-    /* ── HERO（時間帯で写真を切り替え。CSS 背景なので該当の1枚だけ読み込まれる） ── */
+    /* ── HERO（最初の1枚は時間帯で決め、その後スライドショー。CSS 背景なので最初は該当の1枚だけ読み込まれる） ── */
     .hero {
+      position: relative;
+      overflow: hidden;
       width: 100%;
       aspect-ratio: 1290 / 511;
       background: #CDBBA5 url(images/hero-day.jpg) center / cover no-repeat;
     }
     [data-hero="evening"] .hero { background-color: #C9A48F; background-image: url(images/hero-evening.jpg); }
     [data-hero="night"]   .hero { background-color: #3A2A22; background-image: url(images/hero-night.jpg); }
+
+    /* 次の写真を重ねてフェードさせる層（時間は JS の FADE_MS と合わせる） */
+    .hero-fade {
+      position: absolute;
+      top: 0; right: 0; bottom: 0; left: 0;
+      background: center / cover no-repeat;
+      opacity: 0;
+      transition: opacity 1.2s ease;
+    }
+    .hero-fade.is-on { opacity: 1; }
 
     /* ── HOTEL INFO（緑の帯に白抜き文字：デザイン y 511〜739） ── */
     .hotel-info {

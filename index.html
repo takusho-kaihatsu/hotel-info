@@ -56,13 +56,14 @@
        デザイン（.ai 5枚目）: 幅 1290px のアートボード = 画面幅 430px の 3 倍。
        --u はデザインの 1px を画面上の長さに換算した値（アプリ幅 ÷ 1290、最大 480px 幅） */
     :root {
-      --pink:       #DDA6A8;   /* 地色（デザイン実測） */
-      --rose-deep:  #9A5357;   /* 文字・ボタン用の濃いピンク（白地 5.6:1） */
+      --pink:       #DEA7A9;   /* 地色（公式サイト tsubakimori-hotel.com のピンク） */
+      --green:      #59AF92;   /* トンマナの緑。住所の帯（公式サイトの緑） */
+      --rose-deep:  #9A5357;   /* リンク・チップ・小見出し用の濃いピンク（白地 5.6:1） */
       --pink-pale:  #F8EDED;   /* タグ・チップの地 */
       --pink-tint:  #FFFFFF;   /* 囲み枠の地（淡いピンクの詳細ページの上なので白） */
       --panel-bg:   #F7ECED;   /* 詳細ページの地（ピンクで統一する指定） */
       --white:      #FFFFFF;
-      --ink:        #000000;   /* ホテル名・見出し（デザイン実測） */
+      --ink:        #131313;   /* 見出し・ボタン（公式サイトの黒） */
       --text:       #333333;   /* 本文 */
       --muted:      #6B6B6B;   /* 注記（白地 5.3:1） */
       --font-ja:  'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;
@@ -119,9 +120,9 @@
     [data-hero="evening"] .hero { background-color: #C9A48F; background-image: url(images/hero-evening.jpg); }
     [data-hero="night"]   .hero { background-color: #3A2A22; background-image: url(images/hero-night.jpg); }
 
-    /* ── HOTEL INFO（白い帯：デザイン y 511〜739） ── */
+    /* ── HOTEL INFO（緑の帯に白抜き文字：デザイン y 511〜739） ── */
     .hotel-info {
-      background: var(--white);
+      background: var(--green);
       padding: calc(64 * var(--u)) calc(85 * var(--u)) calc(58 * var(--u));
     }
 
@@ -131,7 +132,7 @@
       font-weight: 500;
       letter-spacing: .03em;
       line-height: 1.2;
-      color: var(--ink);
+      color: var(--white);
     }
 
     .hotel-address {
@@ -139,7 +140,7 @@
       font-size: max(10px, calc(27 * var(--u)));
       font-weight: 500;
       line-height: 1.25;
-      color: var(--ink);
+      color: var(--white);
       margin-top: calc(11 * var(--u));
     }
 
@@ -357,13 +358,13 @@
       font-weight: 500;
       letter-spacing: .15em;
       text-transform: uppercase;
-      color: var(--rose-deep);
-      margin-bottom: 6px;
+      color: var(--ink);
+      margin-bottom: 18px;
     }
 
     .dc-h1 {
       font-family: var(--font-en);
-      font-size: 30px;
+      font-size: 38px;
       font-weight: 500;
       letter-spacing: .03em;
       color: var(--ink);
@@ -371,10 +372,30 @@
       margin-bottom: 24px;
     }
 
+    /* 公式サイトのコンセプト欄に合わせた見せ方：ラベル下の2色の線、2色のタイトル、太字のリード文 */
+    .dc-concept-en::after {
+      content: '';
+      display: block;
+      width: 28px;
+      height: 3px;
+      margin-top: 8px;
+      background: linear-gradient(90deg, var(--pink) 50%, var(--green) 50%);
+    }
+    .dc-h1-pink  { color: var(--pink); }
+    .dc-h1-green { color: var(--green); }
+
+    .dc-concept-lead {
+      font-size: 19px;
+      font-weight: 700;
+      line-height: 1.6;
+      letter-spacing: .04em;
+      color: var(--ink);
+    }
+
     .dc-concept-body {
       font-size: 15px;
       line-height: 1.95;
-      color: var(--text);
+      color: var(--ink);
     }
 
     .dc-concept-body p { margin-bottom: 18px; }
@@ -668,15 +689,15 @@
       color: var(--rose-deep);
     }
 
-    /* buttons（btn-green も同じ色にそろえる） */
+    /* buttons（公式サイトと同じ黒い丸型。btn-green も同じ色にそろえる） */
     .btn {
       display: flex;
       align-items: center;
       justify-content: center;
       width: 100%;
       min-height: 52px;
-      padding: 14px 20px;
-      border-radius: var(--radius);
+      padding: 14px 28px;
+      border-radius: 999px;
       border: none;
       cursor: pointer;
       font-family: var(--font-ja);
@@ -693,7 +714,7 @@
 
     .btn:active { opacity: .85; transform: scale(.98); }
     .btn-rose,
-    .btn-green  { background: var(--rose-deep); color: var(--white); }
+    .btn-green  { background: var(--ink); color: var(--white); }
 
     /* tel */
     .tel-link {
@@ -901,9 +922,9 @@
     function buildIntro() {
       return (
         '<p class="dc-concept-en">concept</p>' +
-        '<h2 class="dc-h1">Unusual Usual</h2>' +
+        '<h2 class="dc-h1">' + conceptTitle('Unusual Usual') + '</h2>' +
         '<div class="dc-concept-body">' +
-          '<p>特別で、贅沢な、非日常な日常を。</p>' +
+          '<p class="dc-concept-lead">特別で、贅沢な、非日常な日常を</p>' +
           '<p>休みをとって、旅に出る。<br>' +
              '時間に追われ、予定に追われ、マストに追われる日々から距離をとるために。</p>' +
           '<p>今を生きる私たちが思う贅沢とは、余白。<br>' +
@@ -1456,8 +1477,19 @@
       flush();
       if (!title || !paras.length) return null;
       return '<p class="dc-concept-en">concept</p>' +
-             '<h2 class="dc-h1">' + esc(title) + '</h2>' +
-             '<div class="dc-concept-body"><p>' + paras.join('</p><p>') + '</p></div>';
+             '<h2 class="dc-h1">' + conceptTitle(title) + '</h2>' +
+             '<div class="dc-concept-body">' +
+               '<p class="dc-concept-lead">' + paras[0] + '</p>' +
+               (paras.length > 1 ? '<p>' + paras.slice(1).join('</p><p>') + '</p>' : '') +
+             '</div>';
+    }
+
+    /* 公式サイトに合わせ、タイトルの最初の単語をピンク、残りを緑にする（例：Unusual / Usual） */
+    function conceptTitle(title) {
+      var words = String(title).trim().split(/\s+/);
+      if (words.length < 2) return esc(title);
+      return '<span class="dc-h1-pink">' + esc(words[0]) + '</span> ' +
+             '<span class="dc-h1-green">' + esc(words.slice(1).join(' ')) + '</span>';
     }
 
     function liveArt(rows) {

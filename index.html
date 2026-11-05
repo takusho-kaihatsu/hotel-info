@@ -1,25 +1,78 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-hero="day">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>TSUBAKIMORI HOTEL</title>
+  <!-- ヘッダー写真の時間帯（日本時間）を描画前に決める。読み込むのは今の時間帯の1枚だけ -->
+  <script id="heroTime">
+  (function () {
+    var root = document.documentElement;
+    var LABELS = {
+      day:     'TSUBAKIMORI HOTEL ラウンジ',
+      evening: 'TSUBAKIMORI HOTEL アーチの先のレセプション',
+      night:   'TSUBAKIMORI HOTEL レンガ壁のロゴサイン'
+    };
+    // 端末のタイムゾーンに依存しないよう UTC + 9 で判定
+    function slot() {
+      var h = (new Date().getUTCHours() + 9) % 24;
+      if (h >= 5 && h < 16) return 'day';      // 5:00〜16:00 ラウンジ
+      if (h >= 16 && h < 19) return 'evening'; // 16:00〜19:00 アーチ
+      return 'night';                          // 19:00〜5:00 レンガ壁
+    }
+    function src(s) { return 'images/hero-' + s + '.jpg'; }
+    function label() {
+      var el = document.getElementById('hero');
+      if (el) el.setAttribute('aria-label', LABELS[root.getAttribute('data-hero')] || LABELS.day);
+    }
+    function refresh() {
+      var s = slot();
+      if (s === root.getAttribute('data-hero')) return;
+      var img = new Image();
+      img.onload = img.onerror = function () { root.setAttribute('data-hero', s); label(); };
+      img.src = src(s);
+    }
+
+    var first = slot();
+    root.setAttribute('data-hero', first);
+    try {
+      var link = document.createElement('link');
+      link.rel = 'preload'; link.as = 'image'; link.href = src(first);
+      document.head.appendChild(link);
+    } catch (e) {}
+
+    document.addEventListener('DOMContentLoaded', label);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') refresh();
+    });
+    window.addEventListener('pageshow', function (e) { if (e.persisted) refresh(); });
+  })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
+    /* ── TOKENS ──
+       デザイン（.ai 5枚目）: 幅 1290px のアートボード = 画面幅 430px の 3 倍。
+       --u はデザインの 1px を画面上の長さに換算した値（アプリ幅 ÷ 1290、最大 480px 幅） */
     :root {
-      --rose:       #C9888C;
-      --rose-dark:  #B07478;
-      --rose-light: #F0DEDE;
-      --rose-bg:    #F7ECED;
+      --pink:       #DDA6A8;   /* 地色（デザイン実測） */
+      --rose-deep:  #9A5357;   /* 文字・ボタン用の濃いピンク（白地 5.6:1） */
+      --pink-pale:  #F8EDED;   /* タグ・チップの地 */
+      --pink-tint:  #FFFFFF;   /* 囲み枠の地（淡いピンクの詳細ページの上なので白） */
+      --panel-bg:   #F7ECED;   /* 詳細ページの地（ピンクで統一する指定） */
       --white:      #FFFFFF;
-      --black:      #1A1A1A;
-      --gray:       #888888;
-      --gray-light: #F5F5F5;
-      --font-ja: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
-      --font-en: 'Cormorant Garamond', Georgia, serif;
-      --radius: 18px;
+      --ink:        #000000;   /* ホテル名・見出し（デザイン実測） */
+      --text:       #333333;   /* 本文 */
+      --muted:      #6B6B6B;   /* 注記（白地 5.3:1） */
+      --font-ja:  'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', sans-serif;
+      --font-en:  'Jost', 'Futura', 'Century Gothic', var(--font-ja);   /* 欧文は Jost、和文は Zen Kaku に落ちる */
+      --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Courier New', monospace;
+      --u: calc(min(100vw, 480px) / 1290);
+      --radius: 14px;
+      --col-bg: linear-gradient(90deg,
+                  var(--pink) calc(50% - 240px), var(--panel-bg) calc(50% - 240px),
+                  var(--panel-bg) calc(50% + 240px), var(--pink) calc(50% + 240px));
     }
 
     *, *::before, *::after {
@@ -31,11 +84,14 @@
     html {
       height: 100%;
       overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
     }
 
     body {
       font-family: var(--font-ja);
-      background: var(--rose-bg);
+      background: var(--pink);
+      color: var(--text);
       min-height: 100%;
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
@@ -44,109 +100,156 @@
 
     body.panel-open { overflow: hidden; }
 
-    /* ── APP SHELL ── */
+    /* ── APP SHELL（PC では 480px で中央寄せ、両側はピンク） ── */
     .app {
       max-width: 480px;
       margin: 0 auto;
-      background: var(--rose-bg);
+      background: var(--pink);
       min-height: 100vh;
       position: relative;
       overflow-x: hidden;
     }
 
-    /* ── HERO ── */
+    /* ── HERO（時間帯で写真を切り替え。CSS 背景なので該当の1枚だけ読み込まれる） ── */
     .hero {
       width: 100%;
-      aspect-ratio: 16 / 9;
-      background:
-        linear-gradient(180deg, transparent 55%, rgba(255,255,255,.12) 100%),
-        linear-gradient(135deg,
-          #D4B896 0%,
-          #C09878 18%,
-          #9E8A72 34%,
-          #8A9E84 55%,
-          #6B9490 75%,
-          #5A7888 100%
-        );
+      aspect-ratio: 1290 / 511;
+      background: #CDBBA5 url(images/hero-day.jpg) center / cover no-repeat;
     }
+    [data-hero="evening"] .hero { background-color: #C9A48F; background-image: url(images/hero-evening.jpg); }
+    [data-hero="night"]   .hero { background-color: #3A2A22; background-image: url(images/hero-night.jpg); }
 
-    /* ── HOTEL INFO ── */
+    /* ── HOTEL INFO（白い帯：デザイン y 511〜739） ── */
     .hotel-info {
-      background: var(--rose-bg);
-      padding: 20px 20px 18px;
+      background: var(--white);
+      padding: calc(64 * var(--u)) calc(85 * var(--u)) calc(58 * var(--u));
     }
 
     .hotel-name {
       font-family: var(--font-en);
-      font-size: 26px;
-      font-weight: 600;
-      letter-spacing: .07em;
-      color: var(--black);
-      margin-bottom: 6px;
+      font-size: max(14px, calc(52 * var(--u)));
+      font-weight: 500;
+      letter-spacing: .03em;
       line-height: 1.2;
+      color: var(--ink);
     }
 
     .hotel-address {
-      font-size: 13px;
-      color: var(--gray);
-      letter-spacing: .01em;
-      line-height: 1.55;
+      font-family: var(--font-en);
+      font-size: max(10px, calc(27 * var(--u)));
+      font-weight: 500;
+      line-height: 1.25;
+      color: var(--ink);
+      margin-top: calc(11 * var(--u));
     }
 
-    /* ── MENU GRID ── */
+    /* ── MENU GRID（カード 350 角・間隔 45・左右 75：デザイン実測） ── */
     .menu-section {
-      background: var(--rose-bg);
-      padding: 16px;
-      min-height: calc(100vh - 200px);
+      background: var(--pink);
+      padding: calc(62 * var(--u)) calc(75 * var(--u));
+      padding-bottom: calc(284 * var(--u) + env(safe-area-inset-bottom, 0px));
     }
 
     .menu-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: calc(45 * var(--u));
     }
 
     .menu-card {
-      background: var(--rose);
-      border-radius: var(--radius);
-      padding: 20px 8px 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
+      position: relative;
+      display: block;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      padding: 0;
+      border: 1px solid var(--white);
+      border-radius: calc(39 * var(--u));
+      background: transparent;
+      color: var(--white);
+      font: inherit;
+      text-align: center;
       cursor: pointer;
-      border: none;
       appearance: none;
       -webkit-appearance: none;
-      color: var(--white);
-      min-height: 130px;
-      width: 100%;
-      text-align: center;
       -webkit-tap-highlight-color: transparent;
-      transition: transform .15s ease, box-shadow .15s ease;
+      transition: background-color .15s ease, transform .15s ease;
     }
 
-    .menu-card:active { transform: scale(.95); }
-
-    .menu-card.selected {
-      background: var(--white);
-      color: var(--rose);
-      box-shadow: 0 4px 20px rgba(201,136,140,.35);
+    /* aspect-ratio 非対応（iOS 14 以前）では高さ 0 になるため、padding で比率を保つ */
+    @supports not (aspect-ratio: 1 / 1) {
+      .hero      { height: 0; padding-top: 39.612%; }   /* 511 / 1290 */
+      .menu-card { height: 0; padding-top: 100%; }
     }
 
+    .menu-card:active { background: rgba(255,255,255,.18); transform: scale(.97); }
+    .menu-card:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+    @media (hover: hover) {
+      .menu-card:hover { background: rgba(255,255,255,.12); }
+    }
+
+    /* アイコンはカード全体（350×350）の座標で描いているので、カードに重ねるだけで位置が合う */
     .card-icon {
-      width: 44px;
-      height: 44px;
-      display: block;
-      flex-shrink: 0;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
     }
 
+    /* 日本語ラベル：中心がカード上端から 65.4%。2行に折り返したときは上へ伸びる */
     .card-label {
-      font-size: 13px;
+      position: absolute;
+      left: 3%;
+      right: 3%;
+      bottom: calc(34.6% - .625em);
+      font-family: var(--font-ja);
+      font-size: max(9px, calc(25 * var(--u)));
       font-weight: 500;
-      line-height: 1.4;
+      line-height: 1.25;
+      letter-spacing: .05em;
+      padding-left: .05em;
+      word-break: keep-all;
       color: inherit;
+    }
+
+    /* 細い横線：上端から 74.9%、左右 10.6% あけ */
+    .card-rule {
+      position: absolute;
+      left: 10.63%;
+      right: 10.63%;
+      top: 74.9%;
+      border-top: .5px solid currentColor;
+    }
+
+    /* 英語ラベル：中心がカード上端から 85.4%。
+       Jost は Futura PT より 1 割ほど字幅が広いので、デザインの 27px を 25px 相当にして幅を合わせる */
+    .card-en {
+      position: absolute;
+      left: 2%;
+      right: 2%;
+      top: 85.4%;
+      transform: translateY(-50%);
+      white-space: nowrap;
+      font-family: var(--font-en);
+      font-size: max(9px, calc(25 * var(--u)));
+      font-weight: 500;
+      line-height: 1.1;
+      letter-spacing: .05em;
+      padding-left: .05em;
+      color: inherit;
+    }
+
+    /* 2行の長い英語ラベル（Amenities & / Items available on request）はカード幅に収まる大きさに */
+    .card-en--long { font-size: max(8px, calc(23 * var(--u))); }
+
+    /* 幅の狭い端末では字間を詰めて、はみ出しを防ぐ */
+    @media (max-width: 399px) {
+      .card-label, .card-en { letter-spacing: .01em; padding-left: 0; }
+    }
+    @media (max-width: 339px) {
+      .card-label, .card-en { font-size: 8px; }
+      .card-en--long { font-size: 7px; }
     }
 
     /* ── DETAIL PANEL ── */
@@ -156,7 +259,7 @@
       bottom: 0;
       left: 0;
       width: 100%;
-      background: var(--white);
+      background: var(--pink);
       transform: translateX(100%);
       transition: transform .32s cubic-bezier(.4,0,.2,1);
       z-index: 200;
@@ -169,21 +272,25 @@
 
     .detail-header {
       flex-shrink: 0;
-      background: var(--rose);
-      padding: 16px 20px;
-      padding-top: max(16px, calc(16px + env(safe-area-inset-top, 0px)));
+      background: var(--col-bg);
+      border-bottom: 1px solid var(--pink);
+      padding: 10px 16px;
+      padding-top: calc(10px + env(safe-area-inset-top, 0px));
+      padding-left: max(calc(16px + env(safe-area-inset-left, 0px)), calc(50% - 224px));
+      padding-right: max(calc(16px + env(safe-area-inset-right, 0px)), calc(50% - 224px));
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
+      min-height: 64px;
     }
 
     .back-btn {
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
-      border: none;
-      background: rgba(255,255,255,.22);
-      color: var(--white);
+      border: 1px solid var(--rose-deep);
+      background: var(--white);
+      color: var(--rose-deep);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -193,168 +300,214 @@
       transition: background .15s;
     }
 
-    .back-btn:active { background: rgba(255,255,255,.38); }
+    .back-btn:active { background: var(--pink-pale); }
+    .back-btn:focus-visible { outline: 2px solid var(--rose-deep); outline-offset: 2px; }
+
+    .detail-title {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
 
     .detail-title-text {
+      font-family: var(--font-ja);
       font-size: 16px;
-      font-weight: 700;
-      color: var(--white);
-      flex: 1;
+      font-weight: 500;
+      letter-spacing: .05em;
+      line-height: 1.35;
+      color: var(--ink);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
+    .detail-title-en {
+      font-family: var(--font-en);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: .05em;
+      line-height: 1.3;
+      color: var(--rose-deep);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .detail-title-en:empty { display: none; }
+
     .detail-body {
       flex: 1;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      padding: 24px 20px;
-      padding-bottom: max(24px, calc(24px + env(safe-area-inset-bottom, 0px)));
-      background: var(--rose-bg);
+      overscroll-behavior: contain;
+      background: var(--col-bg);
+      padding: 28px 20px;
+      padding-left: max(calc(20px + env(safe-area-inset-left, 0px)), calc(50% - 220px));
+      padding-right: max(calc(20px + env(safe-area-inset-right, 0px)), calc(50% - 220px));
+      padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+      overflow-wrap: anywhere;
     }
 
-    /* ── DETAIL CONTENT ATOMS ── */
+    /* ── DETAIL CONTENT ATOMS（クラス名は LIVE DATA の処理と共通。見た目だけ変更） ── */
     .dc-concept-en {
       font-family: var(--font-en);
       font-size: 13px;
+      font-weight: 500;
       letter-spacing: .15em;
       text-transform: uppercase;
-      color: var(--rose);
+      color: var(--rose-deep);
       margin-bottom: 6px;
     }
 
     .dc-h1 {
       font-family: var(--font-en);
-      font-size: 28px;
-      font-weight: 600;
-      color: var(--black);
+      font-size: 30px;
+      font-weight: 500;
+      letter-spacing: .03em;
+      color: var(--ink);
       line-height: 1.25;
-      margin-bottom: 22px;
+      margin-bottom: 24px;
     }
 
     .dc-concept-body {
-      font-size: 14px;
-      line-height: 1.88;
-      color: #444;
+      font-size: 15px;
+      line-height: 1.95;
+      color: var(--text);
     }
 
-    .dc-concept-body p { margin-bottom: 16px; }
+    .dc-concept-body p { margin-bottom: 18px; }
     .dc-concept-body p:last-child { margin-bottom: 0; }
 
     .dc-section-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--black);
+      font-family: var(--font-en);
+      font-size: 16px;
+      font-weight: 500;
+      letter-spacing: .05em;
+      line-height: 1.5;
+      color: var(--ink);
       padding-bottom: 8px;
-      border-bottom: 2px solid var(--rose-light);
-      margin: 24px 0 14px;
+      border-bottom: 1px solid var(--pink);
+      margin: 32px 0 14px;
     }
 
     .dc-section-title:first-child { margin-top: 0; }
 
     .dc-subsection {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--rose-dark);
-      margin: 16px 0 8px;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: .03em;
+      color: var(--rose-deep);
+      margin: 18px 0 8px;
     }
 
     .dc-p {
-      font-size: 14px;
-      line-height: 1.75;
-      color: #333;
+      font-size: 15px;
+      line-height: 1.85;
+      color: var(--text);
       margin-bottom: 12px;
     }
 
     .dc-p:last-child { margin-bottom: 0; }
+    .dc-p strong, .dc-concept-body strong { font-weight: 700; color: var(--ink); }
 
     .dc-ul {
       margin: 0 0 12px;
-      padding-left: 18px;
+      padding-left: 1.2em;
     }
 
     .dc-ul li {
-      font-size: 14px;
-      line-height: 1.7;
-      color: #333;
-      margin-bottom: 4px;
+      font-size: 15px;
+      line-height: 1.8;
+      color: var(--text);
+      margin-bottom: 6px;
     }
 
-    /* wifi */
+    .dc-ul li::marker { color: var(--rose-deep); }
+
+    /* wifi：トップのカードと同じピンク地＋白い細線。文字は黒で読みやすく */
     .wifi-card {
-      background: var(--rose);
+      background: var(--pink);
       border-radius: var(--radius);
       padding: 28px 24px;
-      margin: 8px 0 24px;
+      margin: 4px 0 24px;
       text-align: center;
+      color: var(--ink);
     }
 
-    .wifi-row { margin: 10px 0; }
+    .wifi-row { margin: 8px 0; }
 
     .wifi-lbl {
-      font-size: 11px;
-      color: rgba(255,255,255,.75);
-      letter-spacing: .08em;
+      font-family: var(--font-en);
+      font-size: 12px;
+      font-weight: 500;
+      color: #1A1A1A;
+      letter-spacing: .12em;
       text-transform: uppercase;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
     .wifi-val {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--white);
+      font-family: var(--font-mono);   /* l と I、0 と O を見分けやすく */
+      font-size: 21px;
+      font-weight: 600;
+      color: var(--ink);
       letter-spacing: .04em;
-      font-family: 'Courier New', Courier, monospace;
       word-break: break-all;
     }
 
     .wifi-divider {
-      height: 1px;
-      background: rgba(255,255,255,.25);
-      margin: 16px 0;
+      height: 0;
+      border-top: 1px solid var(--white);
+      margin: 18px 12px;
     }
 
     /* checkin/out */
     .cio-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 12px;
-      margin: 12px 0 20px;
+      margin: 4px 0 20px;
     }
 
     .cio-box {
-      background: var(--rose);
-      border-radius: 16px;
-      padding: 18px 12px;
+      background: var(--pink);
+      border-radius: var(--radius);
+      padding: 20px 10px 18px;
       text-align: center;
-      color: var(--white);
+      color: var(--ink);
     }
 
     .cio-lbl {
-      font-size: 11px;
-      opacity: .8;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: .05em;
+      color: #1A1A1A;
       margin-bottom: 6px;
     }
 
     .cio-time {
       font-family: var(--font-en);
-      font-size: 32px;
-      font-weight: 600;
+      font-size: 34px;
+      font-weight: 500;
+      letter-spacing: .02em;
       line-height: 1.1;
     }
 
     .cio-note {
-      font-size: 11px;
-      opacity: .75;
-      margin-top: 5px;
+      font-size: 12px;
+      color: #1A1A1A;
+      line-height: 1.5;
+      margin-top: 6px;
     }
 
     .cio-en {
-      font-size: 12px;
-      color: var(--gray);
-      line-height: 1.65;
-      background: var(--gray-light);
+      font-family: var(--font-en);
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+      background: var(--pink-tint);
       border-radius: 12px;
       padding: 12px 14px;
       margin-bottom: 16px;
@@ -365,9 +518,10 @@
       list-style: none;
       padding: 0;
       margin: 0;
-      border-radius: 16px;
+      border-radius: var(--radius);
       overflow: hidden;
-      border: 1px solid var(--rose-light);
+      border: 1px solid var(--pink);
+      background: var(--white);
     }
 
     .floor-item {
@@ -375,7 +529,7 @@
       align-items: center;
       gap: 14px;
       padding: 12px 16px;
-      border-bottom: 1px solid var(--rose-light);
+      border-bottom: 1px solid var(--pink-pale);
     }
 
     .floor-item:last-child { border-bottom: none; }
@@ -383,25 +537,26 @@
     .floor-f {
       font-family: var(--font-en);
       font-size: 18px;
-      font-weight: 600;
-      color: var(--rose);
-      width: 30px;
+      font-weight: 500;
+      color: var(--rose-deep);
+      width: 34px;
       flex-shrink: 0;
       text-align: center;
     }
 
     .floor-desc {
-      font-size: 13px;
-      color: var(--black);
-      line-height: 1.45;
+      font-size: 14px;
+      color: #1A1A1A;
+      line-height: 1.5;
     }
 
     /* info box */
     .info-box {
-      border: 1px solid var(--rose-light);
-      border-radius: 16px;
+      border: 1px solid var(--pink);
+      border-radius: var(--radius);
       overflow: hidden;
       margin: 8px 0 18px;
+      background: var(--white);
     }
 
     .info-row {
@@ -409,71 +564,75 @@
       justify-content: space-between;
       align-items: flex-start;
       padding: 12px 16px;
-      border-bottom: 1px solid var(--rose-light);
-      gap: 10px;
+      border-bottom: 1px solid var(--pink-pale);
+      gap: 12px;
     }
 
     .info-row:last-child { border-bottom: none; }
 
     .info-lbl {
-      font-size: 12px;
-      color: var(--gray);
+      font-size: 13px;
+      color: var(--muted);
       white-space: nowrap;
       flex-shrink: 0;
       padding-top: 1px;
     }
 
     .info-val {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 500;
-      color: var(--black);
+      color: #1A1A1A;
       text-align: right;
-      line-height: 1.55;
+      line-height: 1.6;
     }
 
     /* amenity tags */
     .tag-wrap {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 8px;
       margin: 8px 0 16px;
     }
 
     .tag {
       display: inline-block;
-      background: var(--rose-light);
-      color: var(--rose-dark);
-      border-radius: 20px;
-      padding: 5px 13px;
-      font-size: 12px;
+      background: var(--white);
+      color: var(--rose-deep);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 13px;
       font-weight: 500;
+      line-height: 1.5;
     }
 
     /* venue */
     .venue {
-      border: 1px solid var(--rose-light);
-      border-radius: 16px;
+      border: 1px solid var(--pink);
+      border-radius: var(--radius);
       padding: 16px;
-      margin: 10px 0;
+      margin: 12px 0;
+      background: var(--white);
     }
 
     .venue-name {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--black);
-      margin-bottom: 3px;
+      font-family: var(--font-en);
+      font-size: 17px;
+      font-weight: 500;
+      letter-spacing: .03em;
+      color: var(--ink);
+      margin-bottom: 2px;
     }
 
     .venue-desc {
-      font-size: 12px;
-      color: var(--gray);
-      margin-bottom: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 12px;
       line-height: 1.5;
     }
 
     .link-row {
       display: flex;
-      gap: 7px;
+      gap: 8px;
       flex-wrap: wrap;
     }
 
@@ -481,129 +640,156 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 6px 13px;
-      background: var(--rose-light);
-      color: var(--rose-dark);
-      border-radius: 20px;
-      font-size: 12px;
+      min-height: 38px;
+      padding: 8px 16px;
+      background: var(--white);
+      color: var(--rose-deep);
+      border: 1px solid var(--pink-pale);
+      border-radius: 999px;
+      font-family: var(--font-en);
+      font-size: 13px;
       font-weight: 500;
+      letter-spacing: .03em;
+      line-height: 1.3;
       text-decoration: none;
       -webkit-tap-highlight-color: transparent;
       transition: opacity .15s;
     }
 
     .link-chip:active { opacity: .7; }
+    .link-chip:focus-visible, .btn:focus-visible, .tel-link:focus-visible, .tel-inline:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 2px;
+    }
 
     .link-chip-pdf {
       background: var(--white);
-      border: 1px solid var(--rose);
-      color: var(--rose-dark);
+      border-color: var(--rose-deep);
+      color: var(--rose-deep);
     }
 
-    /* buttons */
+    /* buttons（btn-green も同じ色にそろえる） */
     .btn {
-      display: block;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       width: 100%;
-      padding: 15px 20px;
-      border-radius: 14px;
+      min-height: 52px;
+      padding: 14px 20px;
+      border-radius: var(--radius);
       border: none;
       cursor: pointer;
       font-family: var(--font-ja);
-      font-size: 14px;
-      font-weight: 700;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: .05em;
+      line-height: 1.4;
       text-align: center;
       text-decoration: none;
-      margin: 12px 0;
+      margin: 14px 0;
       -webkit-tap-highlight-color: transparent;
       transition: opacity .15s, transform .1s;
     }
 
-    .btn:active { opacity: .82; transform: scale(.98); }
-    .btn-rose   { background: var(--rose); color: var(--white); }
-    .btn-green  { background: #4A9E68;     color: var(--white); }
+    .btn:active { opacity: .85; transform: scale(.98); }
+    .btn-rose,
+    .btn-green  { background: var(--rose-deep); color: var(--white); }
 
     /* tel */
     .tel-link {
       display: inline-block;
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--rose);
-      text-decoration: none;
-      letter-spacing: .04em;
       font-family: var(--font-en);
-      margin: 8px 0 16px;
+      font-size: 26px;
+      font-weight: 500;
+      letter-spacing: .04em;
+      color: var(--rose-deep);
+      text-decoration: underline;
+      text-decoration-color: var(--pink);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 6px;
+      margin: 6px 0 16px;
     }
 
     .tel-inline {
-      color: var(--rose-dark);
-      font-weight: 700;
-      text-decoration: none;
+      color: var(--rose-deep);
+      font-weight: 500;
+      text-decoration: underline;
+      text-decoration-color: var(--pink);
+      text-underline-offset: 3px;
     }
 
     /* dish */
     .dish-item {
-      background: var(--rose-bg);
-      border-radius: 12px;
+      background: var(--pink-tint);
+      border-left: 2px solid var(--pink);
+      border-radius: 0 12px 12px 0;
       padding: 13px 16px;
-      margin: 7px 0;
-      font-size: 14px;
-      color: var(--black);
+      margin: 8px 0;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #1A1A1A;
     }
 
     /* misc */
     .note {
-      font-size: 12px;
-      color: var(--gray);
-      line-height: 1.7;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.75;
     }
 
     .divider {
-      height: 1px;
-      background: var(--rose-light);
-      margin: 18px 0;
+      height: 0;
+      border-top: 1px solid var(--pink);
+      margin: 22px 0;
     }
 
     .hl-box {
-      background: var(--rose-bg);
-      border-radius: 14px;
+      background: var(--pink-tint);
+      border-radius: var(--radius);
       padding: 16px;
       margin: 10px 0 18px;
     }
 
     .artist-card {
-      border-left: 3px solid var(--rose);
+      border-left: 2px solid var(--pink);
       padding-left: 14px;
-      margin: 14px 0;
+      margin: 16px 0;
     }
 
     .artist-name {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--black);
-      margin-bottom: 3px;
+      font-family: var(--font-en);
+      font-size: 17px;
+      font-weight: 500;
+      letter-spacing: .04em;
+      color: var(--ink);
+      margin-bottom: 2px;
     }
 
     .artist-role {
-      font-size: 12px;
-      color: var(--gray);
+      font-size: 13px;
+      color: var(--muted);
       margin-bottom: 8px;
     }
 
     .artist-desc {
-      font-size: 13px;
-      color: #444;
-      line-height: 1.75;
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.8;
       margin-bottom: 10px;
     }
 
     .badge {
       display: inline-block;
-      background: var(--rose-light);
-      color: var(--rose-dark);
+      background: var(--white);
+      color: var(--rose-deep);
       border-radius: 6px;
       padding: 3px 10px;
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 500;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .detail-panel, .menu-card, .btn { transition: none; }
     }
   </style>
 </head>
@@ -612,30 +798,33 @@
 
     <!-- ── HOME ── -->
     <div id="pageHome">
-      <div class="hero" role="img" aria-label="TSUBAKIMORI HOTEL 館内"></div>
+      <div class="hero" id="hero" role="img" aria-label="TSUBAKIMORI HOTEL ラウンジ"></div>
 
       <div class="hotel-info">
         <h1 class="hotel-name">TSUBAKIMORI HOTEL</h1>
         <p class="hotel-address">1-21-32 Tsubakimori, Chuo-ku, Chiba-shi, Chiba 260-0042, Japan</p>
       </div>
 
-      <div class="menu-section">
-        <div class="menu-grid" id="menuGrid" role="list"></div>
-      </div>
+      <nav class="menu-section" aria-label="インフォメーション">
+        <div class="menu-grid" id="menuGrid"></div>
+      </nav>
     </div>
 
     <!-- ── DETAIL PANEL ── -->
-    <div class="detail-panel" id="detailPanel" role="dialog" aria-modal="true">
+    <div class="detail-panel" id="detailPanel" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
       <div class="detail-header">
         <button class="back-btn" id="backBtn" aria-label="前の画面に戻る">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="2.2"
+               stroke="currentColor" stroke-width="1.6"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="19" y1="12" x2="5" y2="12"/>
             <polyline points="12 19 5 12 12 5"/>
           </svg>
         </button>
-        <span class="detail-title-text" id="detailTitle"></span>
+        <div class="detail-title">
+          <span class="detail-title-text" id="detailTitle"></span>
+          <span class="detail-title-en" id="detailTitleEn" lang="en"></span>
+        </div>
       </div>
       <div class="detail-body" id="detailBody"></div>
     </div>
@@ -647,62 +836,63 @@
     'use strict';
 
     /* ========================================================
-       SVG ICONS  (viewBox 0 0 24 24, stroke="currentColor")
+       SVG ICONS — デザイン（.ai）のベクターから起こしたもの。
+       座標はカード全体（350×350、デザインの 1px 単位）なので、カードに重ねるだけで位置・大きさが合う
     ======================================================== */
     var ICONS = [
-      /* 0 初めに — person */
-      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-5.5 16-5.5 16 0"/></svg>',
+      /* 0 コンセプト — 段差のあるビル（ブランド画像のシルエット） */
+      '<svg class="card-icon" viewBox="0 0 350 350" fill="none" aria-hidden="true" focusable="false"><path d="M134 182V106H160V68H194V160H214V182Z" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M177 84V96M177 101V105M177 110V126M177 131V147" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="177" cy="153" r="3.2" fill="currentColor"/></svg>',
 
-      /* 1 アート＆ミュージック — music notes */
-      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+      /* 1 アート＆ミュージック — パレット・筆・音符（.ai 3枚目） */
+      '<svg class="card-icon" viewBox="0 0 350 350" fill="none" aria-hidden="true" focusable="false"><path d="M140.18 166.89C120.11 169.53 106.8 157.98 97.21 141.36C83.9 118.32 94.65 87.21 121.2 71.88C147.75 56.55 180.06 62.8 193.37 85.85" fill="none" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M171.13 83.61C171.13 87.14 168.28 89.99 164.75 89.99C161.23 89.99 158.37 87.14 158.37 83.61C158.37 80.09 161.23 77.23 164.75 77.23C168.28 77.23 171.13 80.09 171.13 83.61" fill="none" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M145.61 82.65C145.61 86.35 142.61 89.35 138.91 89.35C135.21 89.35 132.21 86.35 132.21 82.65C132.21 78.95 135.21 75.95 138.91 75.95C142.61 75.95 145.61 78.95 145.61 82.65" fill="none" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M126.14 97.97C126.14 101.32 123.43 104.03 120.08 104.03C116.73 104.03 114.02 101.32 114.02 97.97C114.02 94.62 116.73 91.91 120.08 91.91C123.43 91.91 126.14 94.62 126.14 97.97" fill="none" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M116.89 122.22C116.89 125.74 114.03 128.6 110.51 128.6C106.99 128.6 104.13 125.74 104.13 122.22C104.13 118.69 106.99 115.84 110.51 115.84C114.03 115.84 116.89 118.69 116.89 122.22" fill="none" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M143.37 146.15C143.37 150.91 139.52 154.76 134.76 154.76C130 154.76 126.14 150.91 126.14 146.15C126.14 141.39 130 137.53 134.76 137.53C139.52 137.53 143.37 141.39 143.37 146.15" fill="none" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M164.75 151.89C164.75 151.89 179.11 124.13 185.81 111.37C192.51 98.61 210.06 66.38 215.16 68.93C220.27 71.49 206.23 98.29 196.02 115.2C185.81 132.11 169.54 155.4 169.54 155.4L164.75 151.89" fill="none" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M150.57 175.69C150.57 175.69 155.25 174.59 155.66 170.06C156.07 165.52 154.15 160.71 157.45 157.41C160.74 154.11 164.59 151.36 167.2 153.43C169.82 155.49 172.98 162.08 169.68 166.62C166.38 171.16 159.51 176.1 154.7 175.97L149.89 175.83" fill="none" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M171.78 137.79L178.78 142.63" fill="none" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M195.15 169.88C195.15 169.88 195.96 175.74 190.56 175.38C185.16 175.02 183.63 173.76 183.18 170.78C182.73 167.81 185.88 164.93 188.76 165.02C191.64 165.11 194.52 166.15 194.93 169.01L195.2 135.63" fill="none" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M221.98 148.43C221.98 148.43 222.79 154.29 217.38 153.93C211.98 153.57 210.45 152.31 210 149.33C209.55 146.36 212.7 143.48 215.58 143.57C218.46 143.66 221.34 144.7 221.75 147.56L222.02 114.18" fill="currentColor" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M249.12 122.75C249.12 122.75 249.93 128.6 244.53 128.24C239.12 127.88 237.59 126.62 237.14 123.65C236.69 120.68 239.84 117.8 242.72 117.89C245.61 117.98 248.48 119.02 248.89 121.87L249.16 88.5" fill="none" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M262.57 132.63C262.57 132.63 245.32 135.57 239.45 142.54C233.57 149.51 237.24 156.85 228.8 163.83C220.36 170.8 209.35 167.86 201.28 174.47C193.2 181.08 188.43 192.09 188.43 192.09" fill="none" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M266.6 137.04C266.6 137.04 249.36 139.97 243.48 146.95C237.61 153.92 241.28 161.26 232.84 168.23C224.4 175.2 213.39 172.27 205.32 178.87C197.24 185.48 192.47 196.49 192.47 196.49" fill="none" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M270.64 141.44C270.64 141.44 253.39 144.38 247.52 151.35C241.65 158.32 245.32 165.66 236.88 172.64C228.44 179.61 217.43 176.67 209.35 183.28C201.28 189.88 196.51 200.89 196.51 200.89" fill="none" stroke="currentColor" stroke-width="2.84" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 
       /* 2 Wi-Fi */
-      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="19.5" r="1.5" fill="currentColor" stroke="none"/><path d="M9 16a4.24 4.24 0 0 1 6 0"/><path d="M5.5 12.5a9.5 9.5 0 0 1 13 0"/><path d="M2 9a15 15 0 0 1 20 0"/></svg>',
+      '<svg class="card-icon" viewBox="0 0 350 350" fill="none" aria-hidden="true" focusable="false"><path d="M127.9 102.37C153.8 76.47 196.2 76.47 222.1 102.37" fill="none" stroke="currentColor" stroke-width="3.05" stroke-linecap="round"/><path d="M145.56 120.04C161.75 103.85 188.25 103.85 204.44 120.04" fill="none" stroke="currentColor" stroke-width="3.05" stroke-linecap="round"/><path d="M163.22 137.7C169.7 131.22 180.3 131.22 186.78 137.7" fill="none" stroke="currentColor" stroke-width="3.05" stroke-linecap="round"/><path d="M182.36 156.68C182.36 157.65 182.17 158.59 181.8 159.49C181.43 160.4 180.89 161.19 180.2 161.88C179.51 162.57 178.72 163.1 177.82 163.48C176.91 163.85 175.98 164.04 175 164.04C174.02 164.04 173.09 163.85 172.18 163.48C171.28 163.1 170.49 162.57 169.8 161.88C169.11 161.19 168.57 160.4 168.2 159.49C167.83 158.59 167.64 157.65 167.64 156.68C167.64 155.7 167.83 154.76 168.2 153.86C168.57 152.96 169.11 152.16 169.8 151.47C170.49 150.78 171.28 150.25 172.18 149.88C173.09 149.51 174.02 149.32 175 149.32C175.98 149.32 176.91 149.51 177.82 149.88C178.72 150.25 179.51 150.78 180.2 151.47C180.89 152.16 181.43 152.96 181.8 153.86C182.17 154.76 182.36 155.7 182.36 156.68" fill="currentColor"/></svg>',
 
-      /* 3 チェックイン/アウト — door + arrow */
-      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="13" height="18" rx="2"/><path d="M15 8h6l-2.5 4 2.5 4h-6"/><circle cx="9" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg>',
+      /* 3 チェックイン／アウト — 鍵 */
+      '<svg class="card-icon" viewBox="0 0 350 350" fill="none" aria-hidden="true" focusable="false"><path d="M164.44 159.36L154 178.68C153.81 178.75 153.8 179.37 154.02 179.31L159.66 177.95L162.99 171.72C163.04 171.62 162.93 171.31 163.35 171.25C162.75 170.43 162.83 169.78 162.67 168.97C162.39 167.66 162.75 166.09 163.88 165.32L166.76 163.9C167.14 163.71 167.37 163.13 167.49 162.74C167.65 162.2 167.32 161.59 167.02 161.11L165.26 158.26C164.77 158.55 164.65 158.96 164.44 159.36M170.27 148.54L166.72 155.15C166.55 155.46 166.28 155.74 166.36 156.28C168.37 155.94 171.2 155.35 172.27 153.88C172.63 153.38 172.52 152.45 172.35 151.85L171.25 147.89C170.85 147.58 170.43 148.23 170.27 148.54M169.21 95.43C169.1 96.13 168.66 96.68 168.41 97.32C166.64 101.86 166.34 106.65 167.4 111.48C168.04 114.45 169.25 117.18 170.78 119.85C171.21 120.61 171.7 121.31 171.23 122.13L164.98 133.92L163.07 137.52C163.03 137.59 162.94 137.66 163.09 137.82L158.07 147.08L156.56 150.11L152.22 158.28L150.23 162.28L146.4 169.5C146.24 169.8 145.74 170.29 145.91 170.75L147.11 173.95C147.44 173.85 147.59 173.59 147.47 173.43L163.35 144.03L174.03 124.27C174.24 123.89 174.35 123.78 174.65 123.72C174.91 123.66 175.21 123.7 175.51 124.03C175.79 124.35 175.78 125.31 175.57 125.7L148.21 175.99C148.03 176.34 148.56 177.1 148.72 177.46L149.88 180.02C150.2 180.34 150.9 180.11 151.33 180.03L177 132.59C177.2 132.62 177.4 132.56 177.67 132.45C177.96 132.32 178.61 132.95 178.4 133.34L175.82 138.3L173.18 143.21L172.47 144.71L178.5 143.11L185.76 129.8C185.92 129.83 186.02 129.73 186.02 129.67C186.29 129.2 186.94 129.1 187.53 129.13C191.68 129.33 195.57 128.6 199.37 126.74C202.87 125.03 205.77 122.71 208.02 119.55C208.31 119.14 208.72 118.77 208.92 118.4L210.87 114.85C210.89 114.81 210.78 114.71 210.76 114.73C210.86 114.53 210.96 114.55 211.08 114.24C213.05 109.06 213.13 103.42 211.09 98.13C209.17 93.15 205.86 89.05 201.4 86.25L199.41 85.2L197.56 84.47C192.51 82.48 187.17 82.67 181.99 84.41C176.9 86.12 172.85 89.37 170.11 93.88C169.81 94.37 169.29 94.9 169.21 95.43M212.28 115.36L210.23 119.28C209.84 119.68 209.51 120.1 209.17 120.57C206.32 124.45 202.5 127.31 197.98 129.04L196.54 129.48C193.6 130.39 190.53 130.66 187.44 130.7C187.02 130.7 186.95 131.13 186.82 131.36L179.72 144.4L177.85 145.02L172.58 146.48L173.99 151.78C174.59 154.04 173.14 156.09 170.92 156.75C170.19 156.97 169.56 157.37 168.78 157.42C168.22 157.46 167.65 157.66 167.07 157.86L168.87 161.34C169.59 163.38 168.53 165.13 166.66 165.88C166.03 166.13 165.26 166.35 164.77 166.73C164.07 167.27 164.04 168.09 164.21 168.79L164.95 171.74L160.87 179.15L159.92 179.54L154.52 180.85L149.59 181.81C149.1 181.91 148.82 181.44 148.64 181.04L144.53 171.85C144.13 170.96 144.12 170.21 144.56 169.34C145.83 166.79 147.45 164.47 148.36 161.89L152.43 154.39L154.94 149.4L160.05 139.92L161.34 137.23L166.15 128.22L167.36 125.7L169.71 121.14C169.83 120.9 169.47 120.73 169.41 120.6L167.95 117.63C163.92 109.4 164.59 99.19 169.51 91.99C172.28 87.93 176.21 84.94 180.91 83.15L181.79 82.91C185.26 81.61 188.87 81.41 192.47 81.78C199.76 82.54 206.05 86.6 210.04 92.76C214.55 99.72 215.22 107.95 212.28 115.36" fill="currentColor" stroke="currentColor" stroke-width="1.23"/><path d="M188.98 104.17C189.49 104.58 190.27 105.03 190.91 105.24C193.27 106.02 195.91 105.29 197.33 103C199.08 100.19 197.65 96.29 194.6 95.1C193.13 94.53 191.72 94.63 190.31 95.19C188.5 95.91 187.29 97.47 187.04 99.56C186.85 101.17 187.51 103.02 188.98 104.17M193.55 107.1C190.23 107.47 187.24 105.67 185.95 102.56C185.25 100.86 185.26 98.88 186.03 97.11C187.22 94.32 190.38 92.89 193.15 93.16C196.32 93.47 198.96 95.82 199.56 98.85C200.36 102.91 197.65 106.66 193.55 107.1" fill="currentColor" stroke="currentColor" stroke-width="1.23"/></svg>',
 
-      /* 4 館内のご案内 — building grid */
-      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/><line x1="2" y1="16" x2="22" y2="16"/><line x1="9" y1="9" x2="9" y2="22"/></svg>',
+      /* 4 館内のご案内 — i */
+      '<svg class="card-icon" viewBox="0 0 350 350" fill="none" aria-hidden="true" focusable="false"><path d="M217.32 126.71C217.32 150.08 198.37 169.03 175 169.03C151.63 169.03 132.68 150.08 132.68 126.71C132.68 103.33 151.63 84.38 175 84.38C198.37 84.38 217.32 103.33 217.32 126.71" fill="none" stroke="currentColor" stroke-width="2.84"/><circle cx="175" cy="103" r="4.7" fill="currentColor"/><rect x="171.3" y="116.2" width="7.4" height="31.8" fill="currentColor"/></svg>',
 
-      /* 5 貸出備品/アメニティ — hanger */
-      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4a3 3 0 0 1 3 3"/><path d="M15 7l-3 3L3 17h18L12 10 9 7"/></svg>',
+      /* 5 貸出備品／アメニティ — ボトル・タオル */
+      '<svg class="card-icon" viewBox="0 0 350 350" fill="none" aria-hidden="true" focusable="false"><path d="M235.07 161.62C235.3 161.74 235.98 162.29 235.83 162.49L234.84 163.84L208.82 174.04C205.64 175.01 201.15 175.05 199.39 171.9C195.85 165.57 200.04 158.88 206.54 156.53L234.22 146.55C234.48 146.85 235.08 147.7 234.84 147.9L233.41 149.12L207.23 158.46C202.92 160.28 199.74 163.72 200.23 168.65C200.34 169.77 201.27 171.58 202.19 171.98C203.29 172.47 205.18 172.58 206.68 172.65L235.07 161.62" fill="currentColor"/><path d="M230.86 157.58L206.51 166.88C206.26 166.96 204.67 166.5 204.93 166.16L205.85 164.95L234.81 154.11C236.76 153.62 238.53 152.29 239.19 150.83C239.92 149.19 240.13 146.42 238.84 145.16C237.02 143.37 234.46 142.89 232.12 142.17L212.24 136.01C208.86 134.66 204.82 133.02 201.33 132.51L184.6 137.84L184.51 173.38L203.75 180.35C205.31 180.91 208.24 179.94 209.92 179.49L236.23 168.79C238.25 167.97 239.76 165.51 240.12 163.84C240.58 161.74 240.17 158.95 238.47 157.59C236.33 155.87 233.5 156.77 230.86 157.58M173.3 180.53C178.45 180.55 182.61 176.12 182.59 171.21L182.43 127.17C182.4 118.63 176.98 110.56 169.55 106.94C161.99 103.25 153.08 103.28 145.36 106.43C136.86 109.9 131.28 118.59 131.27 127.82L131.23 170.46C131.23 175.75 135.27 180.38 140.81 180.4L173.3 180.53M165.54 102.99C165.67 99.76 165.68 96.78 165.5 93.44C159.28 92.39 154.26 92.45 148.12 93.51L147.97 103.13C154.17 102.1 159.28 102.1 165.54 102.99M158.94 90.36L158.82 81.88C158.14 81.23 155.84 81.12 155.13 81.67L154.96 90.6C156.12 90.71 157.96 90.62 158.94 90.36M167.1 75.97C160.98 76.76 155.35 76.97 149.23 76.53C143.21 76.09 134.81 77.4 134 80.33C133.88 80.77 135.59 81.39 136.07 81.11C146.26 75.18 160.39 84.23 167.1 75.97M210.93 181.25C207.56 182.63 204.08 182.79 200.99 181.64L183.68 175.21C181.71 179.77 178.22 182.66 173.34 182.63L140.38 182.43C133.83 182.39 129.26 176.99 129.26 170.58L129.3 127.18C129.31 116.52 136.25 107.55 145.7 103.9L146.02 92.7C148.03 91.51 150.28 91.06 152.88 90.75L152.95 81.58C146.66 80.81 141.16 80.23 135.72 83.86C134.03 83.07 132.03 81.28 130.79 79.27C141.82 70.11 154.51 77.25 167.92 72.94C168.49 73.9 168.91 76.43 168.51 77.6C168.16 78.63 166.57 79.9 165.41 80.3L160.95 81.85L160.73 90.66L165.25 91.34C166.56 91.53 167.84 92.99 167.86 94.48L168.01 104.08C181.93 109.63 185.21 121.18 184.71 135.72L200.77 130.46C201.72 130.14 204.11 130.83 205.02 131.16C214.23 134.45 223.03 137.27 232.38 140.08C234.86 140.82 238.06 141.63 239.9 143.36C243.27 146.54 242.1 152.34 238.28 154.91C240.92 156.97 242.25 159.05 242.21 162.16C242.17 165.77 240.69 169.02 237.23 170.44L210.93 181.25" fill="currentColor"/><path d="M172.08 142.58C172.08 134.25 165.32 127.5 156.99 127.5C148.65 127.5 141.9 134.25 141.9 142.58C141.9 150.91 148.65 157.66 156.99 157.66C165.32 157.66 172.08 150.91 172.08 142.58M174.15 142.57C174.15 152.06 166.46 159.75 156.96 159.75C147.47 159.75 139.78 152.06 139.78 142.57C139.78 133.09 147.47 125.4 156.96 125.4C166.46 125.4 174.15 133.09 174.15 142.57" fill="currentColor"/></svg>',
 
-      /* 6 レストラン/バー — fork & knife */
-      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="2" x2="8" y2="22"/><path d="M5 2v7h6V2"/><line x1="17" y1="2" x2="17" y2="22"/><path d="M14 7a3 3 0 0 0 6 0V2"/></svg>',
+      /* 6 レストラン／バー — カトラリー・グラス */
+      '<svg class="card-icon" viewBox="0 0 350 350" fill="none" aria-hidden="true" focusable="false"><path d="M181.41 79.77L181.41 109.47C181.41 119.27 189.43 127.29 199.23 127.29L211.11 127.29C220.92 127.29 228.93 119.27 228.93 109.47L228.93 79.77" fill="none" stroke="currentColor" stroke-width="2.01" stroke-linecap="round" stroke-linejoin="round"/><path d="M205.17 127.29L205.17 174.82M181.41 174.82L228.93 174.82" fill="none" stroke="currentColor" stroke-width="2.01" stroke-linecap="round" stroke-linejoin="round"/><path d="M181.41 79.77L181.41 103.53M228.93 79.77L228.93 103.53" fill="none" stroke="currentColor" stroke-width="2.01" stroke-linecap="round" stroke-linejoin="round"/><path d="M151.23 136.44C151.44 132.48 151.94 128.05 149.94 125.3C147.13 121.44 145.14 117.97 145.05 112.94C144.83 100.1 145.82 77.38 155.13 72L155.34 135.91L156.74 173.94C156.82 176.17 154.92 178.29 153.34 178.41C151.04 178.58 149.14 176.18 149.28 173.51L151.23 136.44" fill="none" stroke="currentColor" stroke-width="2.01" stroke-linecap="round" stroke-linejoin="round"/><path d="M121.98 75.06C121.98 75.06 119.93 98.62 121.98 101.28C124.02 103.95 127.1 103.95 127.3 106.2C127.51 108.45 125.25 171.96 125.66 175.24C126.07 178.52 127.71 178.93 130.17 178.93C132.63 178.93 133.86 178.93 134.06 175.24C134.27 171.55 128.74 108.86 130.17 105.59C130.17 105.59 134.88 104.36 136.32 101.69C137.75 99.03 136.32 74.86 136.32 74.86" fill="none" stroke="currentColor" stroke-width="2.01" stroke-linecap="round" stroke-linejoin="round"/><path d="M126.5 74.95L126.5 93.44" fill="none" stroke="currentColor" stroke-width="2.01" stroke-linecap="round" stroke-linejoin="round"/><path d="M131.95 74.95L131.95 93.44" fill="none" stroke="currentColor" stroke-width="2.01" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 
-      /* 7 朝食 — coffee cup */
-      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3c0 0 1 1.5 0 2.5S6 8 8 9"/><path d="M13 3c0 0 1 1.5 0 2.5S11 8 13 9"/><path d="M5 11h14v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-5h1z"/><path d="M19 13h1a2 2 0 1 1 0 4h-1"/><line x1="2" y1="22" x2="22" y2="22"/></svg>',
+      /* 7 朝食 — カップ・クロワッサン */
+      '<svg class="card-icon" viewBox="0 0 350 350" fill="none" aria-hidden="true" focusable="false"><path d="M153.01 122.32L153.01 111.28L89.81 111.28L89.81 179.68L153.01 179.68L153.01 169" fill="none" stroke="currentColor" stroke-width="2.13" stroke-linecap="round" stroke-linejoin="round"/><path d="M171.16 145.66C171.16 134.4 163.44 124.96 153.01 122.32L153.01 128.36C160.2 130.83 165.37 137.64 165.37 145.66C165.37 153.68 160.2 160.49 153.01 162.95L153.01 169C163.44 166.36 171.16 156.91 171.16 145.66" fill="none" stroke="currentColor" stroke-width="2.13" stroke-linecap="round" stroke-linejoin="round"/><path d="M165.37 145.66C165.37 137.64 160.2 130.83 153.01 128.36L153.01 162.95C160.2 160.49 165.37 153.68 165.37 145.66" fill="none" stroke="currentColor" stroke-width="2.13" stroke-linecap="round" stroke-linejoin="round"/><path d="M196.18 175.58C192.47 173.87 188.62 171.55 185.69 168.98L182.07 166.11C179.97 171.5 180.05 182.55 183.8 185.11C186.5 186.95 190.28 185.89 191.86 183.13L196.18 175.58M202.37 174.51C204.33 173.65 205.64 171.67 206.95 170.07C201.47 164.43 197.62 156.31 194.97 148.89C194.4 147.31 194.1 145.9 193.75 144.04C190.22 146.84 187.34 150.02 184.52 153.39C181.97 156.44 180.14 160.86 182.57 163.27C186.84 167.49 191.53 171.34 197.08 173.67C198.56 174.29 200.87 175.18 202.37 174.51M249.3 166.87C251.1 167.87 252.92 168.23 254.53 167.6C256.23 166.94 257.41 165.86 258.03 164.05C258.46 158.1 254.11 151.63 249.38 147.49C248.03 151.66 246.94 155.44 244.75 158.99L242.29 162.97L249.3 166.87M213.07 169.92C216.5 169.08 219.89 168.28 223.27 167.12L226.24 166.11C227.68 164.29 228.58 162.15 228.82 159.76C229.58 152.23 228.75 144.69 227.02 137.35C226.31 134.33 224.28 132.42 221.09 132.16C217.82 131.9 214.48 132.5 211.27 133.41L207.55 134.47C201.5 136.19 194.43 138.97 196.13 145.31C196.98 148.47 198.09 151.38 199.45 154.39C201.98 159.97 207.62 171.25 213.07 169.92M236.69 165.21C241.51 163.28 246.26 151.47 247.63 145.18C248.97 139.03 235.19 135.75 228.61 134.59C228.56 135.15 228.7 135.6 228.82 136.08C230.89 144.05 232.29 155.51 230.12 163.56C231.67 164.65 235.65 165.63 236.69 165.21M198.44 176.17L193.33 184.68C191.29 188.09 186.5 189.1 183.16 187.1C177.2 183.55 177.91 170.78 180.42 164.18C178.3 159.77 179.59 156.59 182.49 152.73C185.39 148.88 188.57 145.53 192.26 142.5C192.74 142.1 193.85 141.48 194.07 140.97C195.3 138.11 197.26 136.31 199.99 135.07C206.26 132.24 212.9 130.44 219.83 129.97C221.44 129.86 223.68 130.44 224.93 131.19C226.09 131.89 226.73 132.24 228.03 132.42C234 133.23 239.91 134.86 245.21 137.74C248.09 139.31 249.79 141.93 249.85 144.99C255.41 149.34 262.5 160.03 259.45 165.93C257.45 169.81 252.59 171.15 248.8 169.12L240.68 164.77C237.32 168.77 234.22 167.23 229.46 165.92C227.88 167.67 226 168.55 223.83 169.14L214.05 171.78C212.27 172.26 210.62 172.19 208.71 171.63L205.66 174.8C203.79 176.74 201.34 177.55 198.44 176.17" fill="currentColor"/></svg>',
 
-      /* 8 ルームサービス — dome cover */
-      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 18 0"/><rect x="2" y="12" width="20" height="2.5" rx="1.25"/><line x1="12" y1="12" x2="12" y2="8.5"/><circle cx="12" cy="7.5" r="1.5" fill="currentColor" stroke="none"/><line x1="2" y1="20" x2="22" y2="20"/></svg>',
+      /* 8 ルームサービス — クロッシュ */
+      '<svg class="card-icon" viewBox="0 0 350 350" fill="none" aria-hidden="true" focusable="false"><path d="M230.06 160.48C230.06 128.75 204.34 103.03 172.61 103.03C140.88 103.03 115.16 128.75 115.16 160.48C115.16 161.18 115.19 161.87 115.21 162.57L230 162.57C230.03 161.87 230.06 161.18 230.06 160.48" fill="none" stroke="currentColor" stroke-width="1.92"/><path d="M238.86 162.57L230 162.57L115.21 162.57L111.14 162.57C108.93 162.57 107.12 164.38 107.12 166.59C107.12 168.8 108.93 170.61 111.14 170.61L116.07 170.61L229.15 170.61L238.86 170.61C241.07 170.61 242.88 168.8 242.88 166.59C242.88 164.38 241.07 162.57 238.86 162.57" fill="none" stroke="currentColor" stroke-width="1.92"/><path d="M172.82 103.42L172.39 103.42C167.85 103.42 164.12 99.7 164.12 95.15L164.12 94.72C164.12 90.17 167.85 86.45 172.39 86.45L172.82 86.45C177.37 86.45 181.09 90.17 181.09 94.72L181.09 95.15C181.09 99.7 177.37 103.42 172.82 103.42" fill="none" stroke="currentColor" stroke-width="1.92"/></svg>',
 
-      /* 9 近隣MAP — map pin */
-      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 13 8 13s8-7 8-13a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+      /* 9 近隣マップ — 地図とピン */
+      '<svg class="card-icon" viewBox="0 0 350 350" fill="none" aria-hidden="true" focusable="false"><path d="M143.65 170.38L143.47 107.41L115.3 122.21L115.32 185.26L143.65 170.38M206.77 138.4L206.96 185.17L234.44 170.99L234.56 107.43L218.79 114.91C218.47 114.65 217.92 113.96 217.81 113.69L236.63 103.8L236.72 171.86L205.81 188.33L144.87 172.31L113.4 188.6L113.28 120.85L144.57 104.73C154.51 105.82 165.12 109.19 175.23 112.91C165.29 113.51 156.61 108.52 145.7 106.8L145.67 169.84L173.83 177.58L174.17 116.76C174.73 116.91 175.39 116.98 176.04 116.94L176.18 178.23L204.48 185.78L204.61 139.37C204.61 138.47 204.46 137.71 204.9 137.28C205.21 136.96 206.77 137.2 206.77 138.4" fill="currentColor"/><path d="M196.83 137.08C209.63 119.71 225.86 95.87 209.1 82.64C202.16 77.16 192.13 76.7 185.08 82.17C167.47 95.83 183.57 118.9 196.83 137.08M196.96 140.74C181.96 121.67 163.86 94.96 184.14 80.15C192.08 74.35 203.57 74.72 211.66 81.76C228.33 96.27 210.67 122.95 196.96 140.74" fill="currentColor"/><path d="M205.12 97.59C205.12 92.99 201.39 89.26 196.79 89.26C192.19 89.26 188.46 92.99 188.46 97.59C188.46 102.2 192.19 105.93 196.79 105.93C201.39 105.93 205.12 102.2 205.12 97.59M207.39 97.57C207.39 103.41 202.66 108.15 196.82 108.15C190.99 108.15 186.25 103.41 186.25 97.57C186.25 91.74 190.99 87 196.82 87C202.66 87 207.39 91.74 207.39 97.57" fill="currentColor"/></svg>',
 
-      /* 10 宿泊規約 — document */
-      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg>',
+      /* 10 宿泊規約 — 書類 */
+      '<svg class="card-icon" viewBox="0 0 350 350" fill="none" aria-hidden="true" focusable="false"><path d="M149.24 100.97L178.68 100.97" fill="none" stroke="currentColor" stroke-width="2.13"/><path d="M149.24 115.5L199.19 115.5" fill="none" stroke="currentColor" stroke-width="2.13"/><path d="M149.24 130.81L199.19 130.81" fill="none" stroke="currentColor" stroke-width="2.13"/><path d="M149.24 146.12L199.19 146.12" fill="none" stroke="currentColor" stroke-width="2.13"/><path d="M149.24 161.43L199.19 161.43" fill="none" stroke="currentColor" stroke-width="2.13"/><path d="M213.23 179.31L136.77 179.31L136.77 78.22L201.34 78.22L201.45 78.22L213.23 89.8L213.23 179.31" fill="none" stroke="currentColor" stroke-width="2.13"/><path d="M201.57 89.72L201.57 78.38L201.67 78.38L212.91 89.72Z" fill="none" stroke="currentColor" stroke-width="2.13"/></svg>',
 
-      /* 11 口コミ — star */
-      '<svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+      /* 11 口コミ — 吹き出しと星 */
+      '<svg class="card-icon" viewBox="0 0 350 350" fill="none" aria-hidden="true" focusable="false"><path d="M175 89.89C151.63 89.89 132.68 108.84 132.68 132.21C132.68 136.26 133.26 140.18 134.32 143.88L122 162.36L142.33 159.11C150.09 168.53 161.84 174.54 175 174.54C198.37 174.54 217.32 155.59 217.32 132.21C217.32 108.84 198.37 89.89 175 89.89" fill="none" stroke="currentColor" stroke-width="1.92"/><path d="M168.71 124.22L175.05 109.37L181.78 124.05L197.87 125.49L185.99 136.43L189.59 152.17L175.51 144.25L161.66 152.54L164.84 136.71L152.67 126.09L168.71 124.22" fill="none" stroke="currentColor" stroke-width="1.92" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     ];
 
     /* ========================================================
        MENU DATA
     ======================================================== */
     var MENU = [
-      { label: '初めに',               content: buildIntro()        },
-      { label: 'アート＆ミュージック', content: buildArt()          },
-      { label: 'Wi-Fi',                content: buildWifi()         },
-      { label: 'チェックイン／\nアウト', content: buildCIO()        },
-      { label: '館内のご案内',          content: buildFloor()       },
-      { label: '貸出備品／\nアメニティ', content: buildAmenity()    },
-      { label: 'レストラン／バー',      content: buildRestaurant()  },
-      { label: '朝食',                  content: buildBreakfast()   },
-      { label: 'ルームサービス',        content: buildRoomService() },
-      { label: '近隣MAP',               content: buildMap()         },
-      { label: '宿泊規約',              content: buildRules()       },
-      { label: '口コミ',                content: buildReview()      }
+      { label: 'コンセプト',              en: 'Concept',                                 content: buildIntro()        },
+      { label: 'アート＆ミュージック',    en: 'Art & Music',                             content: buildArt()          },
+      { label: 'WiFi',                    en: 'Wi-Fi',                                   content: buildWifi()         },
+      { label: 'チェックイン / アウト',   en: 'Check-in / Check-out',                    content: buildCIO()          },
+      { label: '館内のご案内',            en: 'Hotel Information',                       content: buildFloor()        },
+      { label: '貸出備品 / アメニティ',   en: 'Amenities &\nItems available on request', content: buildAmenity()      },
+      { label: 'レストラン / バー',       en: 'Restaurant & Bar',                        content: buildRestaurant()   },
+      { label: '朝食',                    en: 'Breakfast',                               content: buildBreakfast()    },
+      { label: 'ルームサービス',          en: 'Room Service',                            content: buildRoomService()  },
+      { label: '近隣 マップ',             en: 'Area Map',                                content: buildMap()          },
+      { label: '宿泊規約',                en: 'Terms & Conditions',                      content: buildRules()        },
+      { label: '口コミ',                  en: 'Reviews',                                 content: buildReview()       }
     ];
 
     /* ========================================================
@@ -1019,13 +1209,23 @@
        RENDER CARDS
     ======================================================== */
     var grid = document.getElementById('menuGrid');
+
+    function escHtml(s) {
+      return String(s).replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+    }
+
     MENU.forEach(function (item, i) {
       var btn = document.createElement('button');
-      btn.className = 'menu-card' + (i === 0 ? ' selected' : '');
-      btn.setAttribute('role', 'listitem');
-      btn.setAttribute('aria-label', item.label.replace('\n', ''));
+      btn.className = 'menu-card';
+      btn.setAttribute('type', 'button');
+      btn.setAttribute('aria-label', item.label.replace('\n', '') + '（' + item.en.replace('\n', ' ') + '）');
+      // 狭い画面で折り返すときは「＆」や空白の後ろで折る（.card-label は keep-all）
       btn.innerHTML = ICONS[i] +
-        '<span class="card-label">' + item.label.replace('\n', '<br>') + '</span>';
+        '<span class="card-label" aria-hidden="true">' + escHtml(item.label).replace(/＆/g, '＆<wbr>') + '</span>' +
+        '<span class="card-rule" aria-hidden="true"></span>' +
+        '<span class="card-en' + (item.en.indexOf('\n') >= 0 ? ' card-en--long' : '') + '" lang="en" aria-hidden="true">' + escHtml(item.en).replace(/\n/g, '<br>') + '</span>';
       btn.addEventListener('click', function () { openPanel(i); });
       grid.appendChild(btn);
     });
@@ -1035,6 +1235,7 @@
     ======================================================== */
     var panel   = document.getElementById('detailPanel');
     var titleEl = document.getElementById('detailTitle');
+    var titleEnEl = document.getElementById('detailTitleEn');
     var bodyEl  = document.getElementById('detailBody');
     var backBtn = document.getElementById('backBtn');
     var isOpen  = false;
@@ -1043,6 +1244,7 @@
     function openPanel(idx) {
       var item = MENU[idx];
       titleEl.textContent = item.label.replace('\n', '');
+      titleEnEl.textContent = item.en.replace('\n', ' ');
       bodyEl.innerHTML    = item.content;
       bodyEl.scrollTop    = 0;
       panel.classList.add('open');

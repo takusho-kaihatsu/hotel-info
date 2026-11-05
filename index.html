@@ -881,18 +881,18 @@
        MENU DATA
     ======================================================== */
     var MENU = [
-      { label: 'コンセプト',              en: 'Concept',                                 content: buildIntro()        },
-      { label: 'アート＆ミュージック',    en: 'Art & Music',                             content: buildArt()          },
-      { label: 'WiFi',                    en: 'Wi-Fi',                                   content: buildWifi()         },
-      { label: 'チェックイン / アウト',   en: 'Check-in / Check-out',                    content: buildCIO()          },
-      { label: '館内のご案内',            en: 'Hotel Information',                       content: buildFloor()        },
-      { label: '貸出備品 / アメニティ',   en: 'Amenities &\nItems available on request', content: buildAmenity()      },
-      { label: 'レストラン / バー',       en: 'Restaurant & Bar',                        content: buildRestaurant()   },
-      { label: '朝食',                    en: 'Breakfast',                               content: buildBreakfast()    },
-      { label: 'ルームサービス',          en: 'Room Service',                            content: buildRoomService()  },
-      { label: '近隣 マップ',             en: 'Area Map',                                content: buildMap()          },
-      { label: '宿泊規約',                en: 'Terms & Conditions',                      content: buildRules()        },
-      { label: '口コミ',                  en: 'Reviews',                                 content: buildReview()       }
+      { slug: 'concept',      label: 'コンセプト',              en: 'Concept',                                 content: buildIntro()        },
+      { slug: 'art-music',    label: 'アート＆ミュージック',    en: 'Art & Music',                             content: buildArt()          },
+      { slug: 'wifi',         label: 'WiFi',                    en: 'Wi-Fi',                                   content: buildWifi()         },
+      { slug: 'check-in',     label: 'チェックイン / アウト',   en: 'Check-in / Check-out',                    content: buildCIO()          },
+      { slug: 'information',  label: '館内のご案内',            en: 'Hotel Information',                       content: buildFloor()        },
+      { slug: 'amenities',    label: '貸出備品 / アメニティ',   en: 'Amenities &\nItems available on request', content: buildAmenity()      },
+      { slug: 'restaurant',   label: 'レストラン / バー',       en: 'Restaurant & Bar',                        content: buildRestaurant()   },
+      { slug: 'breakfast',    label: '朝食',                    en: 'Breakfast',                               content: buildBreakfast()    },
+      { slug: 'room-service', label: 'ルームサービス',          en: 'Room Service',                            content: buildRoomService()  },
+      { slug: 'area-map',     label: '近隣 マップ',             en: 'Area Map',                                content: buildMap()          },
+      { slug: 'terms',        label: '宿泊規約',                en: 'Terms & Conditions',                      content: buildRules()        },
+      { slug: 'reviews',      label: '口コミ',                  en: 'Reviews',                                 content: buildReview()       }
     ];
 
     /* ========================================================
@@ -1251,7 +1251,7 @@
       document.body.classList.add('panel-open');
       isOpen  = true;
       openIdx = idx;
-      try { history.pushState({ panelIdx: idx }, '', '#' + idx); } catch (e) {}
+      try { history.pushState({ panelIdx: idx }, '', '#' + MENU[idx].slug); } catch (e) {}
       backBtn.focus();
     }
 
@@ -1661,11 +1661,15 @@
 
     /* Handle direct hash on load */
     (function () {
-      var hash = location.hash.replace('#', '');
-      var idx  = parseInt(hash, 10);
-      if (!isNaN(idx) && idx >= 0 && idx < MENU.length) {
-        openPanel(idx);
-      }
+      var hash = location.hash.replace('#', '').toLowerCase();
+      var idx  = -1;
+      for (var i = 0; i < MENU.length; i++) if (MENU[i].slug === hash) idx = i;
+      // 以前の番号付き URL（#0〜#11）も開けるようにしておく
+      if (idx < 0 && /^\d+$/.test(hash) && +hash < MENU.length) idx = +hash;
+      if (idx < 0) return;
+      // 直接開いたときは、戻る先をトップ（#なし）にする
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+      openPanel(idx);
     })();
 
   })();

@@ -609,6 +609,16 @@
       line-height: 1.5;
     }
 
+    /* シートのセル内で改行した 2 行目以降（英語）は、日本語の下に小さく出す */
+    .floor-en {
+      display: block;
+      font-family: var(--font-en);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 2px;
+    }
+
     /* info box */
     .info-box {
       border: 1px solid var(--pink);
@@ -1044,14 +1054,14 @@
       return (
         '<h3 class="dc-section-title">フロアガイド</h3>' +
         '<ul class="floor-list">' +
-          '<li class="floor-item"><span class="floor-f">8F</span><span class="floor-desc">客室</span></li>' +
-          '<li class="floor-item"><span class="floor-f">7F</span><span class="floor-desc">客室</span></li>' +
-          '<li class="floor-item"><span class="floor-f">6F</span><span class="floor-desc">客室</span></li>' +
-          '<li class="floor-item"><span class="floor-f">5F</span><span class="floor-desc">客室</span></li>' +
-          '<li class="floor-item"><span class="floor-f">4F</span><span class="floor-desc">レセプション／ラウンジ／給水所／Bar 西陽</span></li>' +
-          '<li class="floor-item"><span class="floor-f">3F</span><span class="floor-desc">客室</span></li>' +
-          '<li class="floor-item"><span class="floor-f">2F</span><span class="floor-desc">客室／サブエントランス</span></li>' +
-          '<li class="floor-item"><span class="floor-f">1F</span><span class="floor-desc">レストラン Call me Anne／喫煙スペース</span></li>' +
+          '<li class="floor-item"><span class="floor-f">8F</span><span class="floor-desc">客室<span class="floor-en" lang="en">Guest room</span></span></li>' +
+          '<li class="floor-item"><span class="floor-f">7F</span><span class="floor-desc">客室<span class="floor-en" lang="en">Guest room</span></span></li>' +
+          '<li class="floor-item"><span class="floor-f">6F</span><span class="floor-desc">客室<span class="floor-en" lang="en">Guest room</span></span></li>' +
+          '<li class="floor-item"><span class="floor-f">5F</span><span class="floor-desc">客室<span class="floor-en" lang="en">Guest room</span></span></li>' +
+          '<li class="floor-item"><span class="floor-f">4F</span><span class="floor-desc">レセプション／ラウンジ／給水所／Bar 西陽<span class="floor-en" lang="en">Reception／Lounge／Water Station／Bar seiyou</span></span></li>' +
+          '<li class="floor-item"><span class="floor-f">3F</span><span class="floor-desc">客室<span class="floor-en" lang="en">Guest room</span></span></li>' +
+          '<li class="floor-item"><span class="floor-f">2F</span><span class="floor-desc">客室／サブエントランス<span class="floor-en" lang="en">Guest room／Sub entrance</span></span></li>' +
+          '<li class="floor-item"><span class="floor-f">1F</span><span class="floor-desc">レストラン Call me Anne／喫煙スペース<span class="floor-en" lang="en">Restaurant Call me Anne／Smoking area</span></span></li>' +
         '</ul>' +
 
         '<h3 class="dc-section-title">キーカード</h3>' +
@@ -1640,7 +1650,11 @@
       return (
         '<h3 class="dc-section-title">' + esc(title) + '</h3>' +
         '<ul class="floor-list">' + floors.map(function (f) {
-          return '<li class="floor-item"><span class="floor-f">' + esc(f.f) + '</span><span class="floor-desc">' + esc(f.desc) + '</span></li>';
+          // 1 行目（日本語）と、セル内で改行した 2 行目以降（英語）を分けて縦に並べる
+          var lines = f.desc.split('\n').map(function (t) { return t.trim(); }).filter(Boolean);
+          var en = lines.slice(1).join(' ');
+          return '<li class="floor-item"><span class="floor-f">' + esc(f.f) + '</span><span class="floor-desc">' + esc(lines[0] || '') +
+            (en ? '<span class="floor-en" lang="en">' + esc(en) + '</span>' : '') + '</span></li>';
         }).join('') + '</ul>' +
         renderCells(rest, '詳しく見る').html
       );

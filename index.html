@@ -470,11 +470,10 @@
 
     .dc-p:last-child { margin-bottom: 0; }
 
-    /* 本文のうち英語だけの行は、日本語と見分けやすいよう小さめ・グレーにする */
+    /* 本文のうち英語だけの行は、日本語と見分けやすいよう小さめにする（色は日本語と同じ） */
     .dc-en, .dc-p-en {
       font-family: var(--font-en);
       font-size: 13px;
-      color: var(--muted);
     }
     .dc-p-en { line-height: 1.75; }
     .dc-p strong, .dc-concept-body strong { font-weight: 700; color: var(--ink); }
@@ -622,7 +621,6 @@
       display: block;
       font-family: var(--font-en);
       font-size: 12px;
-      color: var(--muted);
       line-height: 1.5;
       margin-top: 2px;
     }

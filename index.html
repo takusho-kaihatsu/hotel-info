@@ -469,6 +469,14 @@
     }
 
     .dc-p:last-child { margin-bottom: 0; }
+
+    /* 本文のうち英語だけの行は、日本語と見分けやすいよう小さめ・グレーにする */
+    .dc-en, .dc-p-en {
+      font-family: var(--font-en);
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .dc-p-en { line-height: 1.75; }
     .dc-p strong, .dc-concept-body strong { font-weight: 700; color: var(--ink); }
 
     .dc-ul {
@@ -1421,11 +1429,27 @@
 
     function telHref(phone) { return 'tel:' + phone.replace(/-/g, ''); }
 
+    // ひらがな・カタカナ・漢字を含まず、英単語が 2 つ以上ある行を「英語の行」とみなす。
+    // URL・メールアドレスは語に数えず、Wi-Fi・Check-in のようにハイフンでつないだ語は 1 語と数える
+    function isEnglishLine(s) {
+      if (/[\u3040-\u30ff\u3400-\u9fff]/.test(s)) return false;
+      var words = s.replace(/https?:\/\/\S+|[^\s@]+@[^\s@]+/gi, ' ').match(/[A-Za-z]{2,}(?:-[A-Za-z]+)*/g);
+      return !!words && words.length >= 2;
+    }
+
     /* セル内の文章を、見出し・小見出し・注記・タグ・段落に組み立てる */
     function renderText(text) {
       var html = '', para = [];
+      // 段落がすべて英語なら段落ごと小さく、日本語と混ざる段落は英語の行だけ小さくする
       function flush() {
-        if (para.length) { html += '<p class="dc-p">' + para.join('<br>') + '</p>'; para = []; }
+        if (!para.length) return;
+        var allEn = para.every(function (l) { return l.en; });
+        html += allEn
+          ? '<p class="dc-p dc-p-en" lang="en">' + para.map(function (l) { return l.h; }).join('<br>') + '</p>'
+          : '<p class="dc-p">' + para.map(function (l) {
+              return l.en ? '<span class="dc-en" lang="en">' + l.h + '</span>' : l.h;
+            }).join('<br>') + '</p>';
+        para = [];
       }
       text.split('\n').forEach(function (raw) {
         var line = raw.trim();
@@ -1462,12 +1486,12 @@
         }
         if (phone) {
           var at = line.indexOf(phone[1], phone.index);
-          para.push(esc(line.slice(0, at)) +
+          para.push({ en: isEnglishLine(line), h: esc(line.slice(0, at)) +
             '<a class="tel-inline" href="' + telHref(phone[1]) + '">' + esc(phone[1]) + '</a>' +
-            esc(line.slice(at + phone[1].length)));
+            esc(line.slice(at + phone[1].length)) });
           return;
         }
-        para.push(esc(line));
+        para.push({ en: isEnglishLine(line), h: esc(line) });
       });
       flush();
       return html;
@@ -1493,7 +1517,7 @@
         }
         if (isHeading(c)) { html += '<h3 class="dc-section-title">' + esc(c) + '</h3>'; continue; }
         t = renderText(c);
-        if (/class="(dc-p|tag-wrap|note|tel-link)"/.test(t)) body++;
+        if (/class="(dc-p|dc-p dc-p-en|tag-wrap|note|tel-link)"/.test(t)) body++;
         html += t;
       }
       return { html: html, links: links, body: body };
